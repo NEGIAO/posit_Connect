@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字名片</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", 
+                         "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .title {
+            font-size: 16px;
+            opacity: 0.95;
+            margin-bottom: 4px;
+        }
+        .company {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section:last-child {
+            margin-bottom: 0;
+        }
+        .section-title {
+            font-size: 14px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 12px;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+        .info-text {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .info-link {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .info-link:hover {
+            text-decoration: underline;
+        }
+        .bio {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .skill-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #999;
+            font-size: 12px;
+        }
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="cardContainer">
+        <div class="error" id="errorMessage" style="display: none;">
+            ❌ 无法加载名片数据<br>
+            <small>请检查URL是否正确</small>
+        </div>
+    </div>
+
+    <script>
+        // 解析URL参数
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // 解码并渲染名片
+        function renderCard() {
+            try {
+                // 获取URL中的data参数
+                const encodedData = getUrlParameter('data');
+                if (!encodedData) {
+                    throw new Error('No data parameter found');
+                }
+
+                // Base64解码
+                const jsonString = atob(encodedData);
+                const data = JSON.parse(jsonString);
+
+                // 构建HTML
+                let html = '<div class="header">';
+                html += `<div class="name">${data.name || '未命名'}</div>`;
+                if (data.title) html += `<div class="title">${data.title}</div>`;
+                if (data.company) html += `<div class="company">${data.company}</div>`;
+                html += '</div><div class="content">';
+
+                // 个人简介
+                if (data.bio) {
+                    html += '<div class="section">';
+                    html += '<div class="section-title">📝 关于我</div>';
+                    html += `<div class="bio">${data.bio}</div>`;
+                    html += '</div>';
+                }
+
+                // 联系方式
+                const hasContact = data.email || data.phone || data.wechat || data.location;
+                if (hasContact) {
+                    html += '<div class="section">';
+                    html += '<div class="section-title">📞 联系方式</div>';
+                    if (data.email) {
+                        html += `<div class="info-item"><span class="icon">📧</span><a href="mailto:${data.email}" class="info-text info-link">${data.email}</a></div>`;
+                    }
+                    if (data.phone) {
+                        html += `<div class="info-item"><span class="icon">📱</span><span class="info-text">${data.phone}</span></div>`;
+                    }
+                    if (data.wechat) {
+                        html += `<div class="info-item"><span class="icon">💬</span><span class="info-text">微信: ${data.wechat}</span></div>`;
+                    }
+                    if (data.location) {
+                        html += `<div class="info-item"><span class="icon">📍</span><span class="info-text">${data.location}</span></div>`;
+                    }
+                    html += '</div>';
+                }
+
+                // 在线主页
+                const hasLinks = data.website || data.github;
+                if (hasLinks) {
+                    html += '<div class="section">';
+                    html += '<div class="section-title">🌐 在线主页</div>';
+                    if (data.website) {
+                        html += `<div class="info-item"><span class="icon">🌐</span><a href="${data.website}" target="_blank" class="info-text info-link">${data.website}</a></div>`;
+                    }
+                    if (data.github) {
+                        html += `<div class="info-item"><span class="icon">💻</span><a href="${data.github}" target="_blank" class="info-text info-link">${data.github}</a></div>`;
+                    }
+                    html += '</div>';
+                }
+
+                // 技能专长
+                if (data.skills && data.skills.length > 0) {
+                    html += '<div class="section">';
+                    html += '<div class="section-title">🎯 技能专长</div>';
+                    html += '<div class="skills">';
+                    data.skills.forEach(skill => {
+                        html += `<span class="skill-tag">${skill}</span>`;
+                    });
+                    html += '</div></div>';
+                }
+
+                html += '</div>';
+                
+                // 页脚
+                html += '<div class="footer">通过二维码访问 • 由 NEGIAO 二维码生成器创建</div>';
+
+                // 渲染到页面
+                document.getElementById('cardContainer').innerHTML = html;
+
+                // 设置页面标题
+                document.title = `${data.name || '数字名片'} - 个人名片`;
+
+            } catch (error) {
+                console.error('Error rendering card:', error);
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        // 页面加载时执行
+        renderCard();
+    </script>
+</body>
+</html>

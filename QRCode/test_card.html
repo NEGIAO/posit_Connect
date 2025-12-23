@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>张三 - 数字名片</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", 
+                         "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .title {
+            font-size: 16px;
+            opacity: 0.95;
+            margin-bottom: 4px;
+        }
+        .company {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-size: 14px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 12px;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+        .info-text {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .info-link {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .info-link:hover {
+            text-decoration: underline;
+        }
+        .bio {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .skill-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <div class="name">张三</div>
+            <div class="title">高级软件工程师</div>
+            <div class="company">科技有限公司</div>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <div class="section-title">📝 关于我</div>
+                <div class="bio">5年软件开发经验，专注于Python和Web开发，热爱开源技术。</div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📞 联系方式</div>
+                <div class="info-item"><span class="icon">📧</span><a href="mailto:zhangsan@example.com" class="info-text info-link">zhangsan@example.com</a></div>
+                <div class="info-item"><span class="icon">📱</span><span class="info-text">138-0000-0000</span></div>
+                <div class="info-item"><span class="icon">💬</span><span class="info-text">微信: zhangsan_wx</span></div>
+                <div class="info-item"><span class="icon">📍</span><span class="info-text">中国·北京</span></div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">🌐 在线主页</div>
+                <div class="info-item"><span class="icon">🌐</span><a href="https://example.com" target="_blank" class="info-text info-link">https://example.com</a></div>
+                <div class="info-item"><span class="icon">💻</span><a href="https://github.com/zhangsan" target="_blank" class="info-text info-link">https://github.com/zhangsan</a></div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">🎯 技能专长</div>
+                <div class="skills">
+                    <span class="skill-tag">Python</span><span class="skill-tag">JavaScript</span><span class="skill-tag">React</span><span class="skill-tag">Docker</span><span class="skill-tag">AWS</span><span class="skill-tag">数据分析</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            通过二维码访问 • 由 NEGIAO 二维码生成器创建
+        </div>
+    </div>
+</body>
+</html>
