@@ -64,7 +64,7 @@ else:
 # 3. 尺寸和容错级别
 st.sidebar.subheader("📐 尺寸设置")
 box_size = st.sidebar.slider("像素块大小", 10, 30, 15, help="控制二维码的精细程度，值越大越清晰")
-border = st.sidebar.slider("边框宽度", 1, 10, 4, help="二维码周围的空白边框")
+border = st.sidebar.slider("边框宽度", 1, 10, 1, help="二维码周围的空白边框")
 
 error_correction = st.sidebar.selectbox(
     "容错级别",
@@ -93,13 +93,20 @@ if logo_option == "使用默认图标":
     default_logo_path = "icon.png"
     if os.path.exists(default_logo_path):
         st.sidebar.image(default_logo_path, width=100, caption="默认图标预览")
-    logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 40, 25, help="图标相对于二维码的大小")
+    logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 30, 20, help="图标相对于二维码的大小，建议不超过30%以确保可识别性")
 elif logo_option == "上传自定义图标":
     logo_file = st.sidebar.file_uploader("上传中心图标 (PNG/JPG)", type=["png", "jpg", "jpeg"])
     if logo_file:
-        logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 40, 25, help="图标相对于二维码的大小")
+        logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 30, 20, help="图标相对于二维码的大小，建议不超过30%以确保可识别性")
 else:
-    logo_size = 25
+    logo_size = 20
+
+# 智能提示：检查容错级别与图标的匹配
+if (logo_option != "无图标") and (error_correction in ["低 (L - 7%)", "中 (M - 15%)"]):
+    st.sidebar.warning("⚠️ 当前容错级别较低，添加中心图标可能影响识别。建议选择"高"或"极高"容错级别。")
+
+if (logo_option != "无图标") and logo_size > 30:
+    st.sidebar.warning("⚠️ 图标尺寸过大可能遮挡过多二维码数据，建议控制在30%以内。")
 
 # 生成二维码函数
 def generate_qr_code(data, fill_color, back_color, box_size, border, error_level, logo=None, logo_size=25, use_default=False):
@@ -263,9 +270,14 @@ st.markdown("""
 1. 在左侧选择内容类型（文本/网址）并输入内容
 2. 选择预设样式或自定义颜色
 3. 调整像素块大小（推荐15-20以获得高清晰度）
-4. 选择容错级别（添加图标建议选择"高"或"极高"）
-5. （可选）选择默认图标或上传自定义图标
+4. 选择容错级别（**添加图标必须选择"高"或"极高"**）
+5. （可选）选择默认图标或上传自定义图标（**建议图标大小≤30%**）
 6. 点击"下载高清二维码"保存 300 DPI 的高清图片
+
+**重要提示**:  
+- 添加中心图标会遮挡部分二维码数据，必须配合**高容错级别**（Q或H）才能确保可识别  
+- 图标大小建议控制在**20-30%**之间，过大会导致无法扫描  
+- 系统会自动为图标添加白色背景边距，提高识别率
 
 **高清输出**: 生成的二维码为 300 DPI，适合打印和大尺寸显示  
 **技术支持**: 基于 `qrcode` 和 `Pillow` 库构建
