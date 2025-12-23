@@ -1,0 +1,88 @@
+---
+title: "Quarto 交互式报告"
+author: "数据分析团队"
+date: today
+format:
+  html:
+    code-fold: true
+    toc: true
+    theme: cosmo
+jupyter: python3
+---
+
+## 项目概述
+
+本报告展示了如何使用 Quarto 在 Posit Connect 上发布动态文档。
+
+## 数据分析
+
+```{python}
+#| label: setup
+#| include: false
+
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+
+np.random.seed(42)
+```
+
+### 数据生成
+
+```{python}
+#| label: data-generation
+
+# 创建示例数据
+df = pd.DataFrame({
+    'x': range(1, 101),
+    'y': np.cumsum(np.random.randn(100)),
+    'category': np.random.choice(['A', 'B', 'C'], 100)
+})
+
+df.head()
+```
+
+### 可视化
+
+```{python}
+#| label: fig-scatter
+#| fig-cap: "交互式散点图"
+
+fig = px.scatter(
+    df, 
+    x='x', 
+    y='y', 
+    color='category',
+    title='数据分布可视化',
+    template='plotly_white'
+)
+fig.update_traces(marker=dict(size=8))
+fig.show()
+```
+
+### 统计摘要
+
+```{python}
+#| label: tbl-summary
+#| tbl-cap: "描述性统计"
+
+df.groupby('category')['y'].describe().round(2)
+```
+
+## 结论
+
+::: {.callout-note}
+## 要点总结
+- Quarto 支持 Python、R、Julia 等多种语言
+- 可导出为 HTML、PDF、Word 等多种格式
+- 与 Posit Connect 无缝集成
+:::
+
+---
+
+**部署命令**：
+```bash
+quarto render
+# 推送到 Git 仓库即可自动发布
+```

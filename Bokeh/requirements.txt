@@ -1,0 +1,3 @@
+bokeh==3.6.2
+numpy==1.26.4
+tornado==6.4.2

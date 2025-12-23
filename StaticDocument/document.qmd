@@ -1,0 +1,52 @@
+---
+title: "静态文档示例"
+author: "技术文档团队"
+date: 2025-12-23
+format:
+  html:
+    toc: true
+    theme: cosmo
+    css: styles.css
+---
+
+# 📄 欢迎访问静态文档
+
+> 本页面展示了如何在 Posit Connect 上托管静态 HTML 文档
+
+## 功能特点
+
+### 支持的内容类型
+- **技术文档**：API 文档、用户手册
+- **项目报告**：项目总结、进度报告
+- **演示文稿**：培训材料、演讲稿
+
+### 优势
+1. **轻量级**：无需服务器端计算
+2. **快速加载**：纯 HTML/CSS/JS
+3. **易于维护**：Markdown 编写
+
+## 示例表格
+
+| 框架 | 类型 | 适用场景 |
+|------|------|---------|
+| Streamlit | 动态应用 | 数据探索 |
+| Quarto | 文档系统 | 技术报告 |
+| Static Document | 静态页面 | 说明文档 |
+
+## 代码示例
+
+```python
+# Python 代码示例
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("Posit Connect"))
+```
+
+---
+
+**部署方式**：
+```bash
+quarto render document.qmd
+# 生成的 HTML 文件自动发布到 Posit Connect
+```

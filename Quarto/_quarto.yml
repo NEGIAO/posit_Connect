@@ -1,0 +1,19 @@
+project:
+  type: website
+  output-dir: _output
+
+website:
+  title: "📝 Quarto 报告示例"
+  navbar:
+    left:
+      - href: index.qmd
+        text: 首页
+      - href: analysis.qmd
+        text: 数据分析
+  
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
+    code-tools: true
