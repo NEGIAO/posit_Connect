@@ -46,7 +46,7 @@ elif content_type == "联系方式/名片":
     vcard_company = st.sidebar.text_input("公司/组织", placeholder="公司名称")
     vcard_title = st.sidebar.text_input("职位", placeholder="职位名称")
     vcard_website = st.sidebar.text_input("网站", placeholder="https://example.com")
-    vcard_note = st.sidebar.text_area("备注", height=60, placeholder="其他信息")
+    vcard_note = st.sidebar.text_area("备注", height=70, placeholder="其他信息")
     
     # 组合信息
     contact_info = []
