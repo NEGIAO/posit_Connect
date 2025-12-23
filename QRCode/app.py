@@ -103,10 +103,10 @@ else:
 
 # 智能提示：检查容错级别与图标的匹配
 if (logo_option != "无图标") and (error_correction in ["低 (L - 7%)", "中 (M - 15%)"]):
-    st.sidebar.warning("⚠️ 当前容错级别较低，添加中心图标可能影响识别。建议选择"高"或"极高"容错级别。")
+    st.sidebar.warning('⚠️ 当前容错级别较低，添加中心图标可能影响识别。建议选择"高"或"极高"容错级别。')
 
 if (logo_option != "无图标") and logo_size > 30:
-    st.sidebar.warning("⚠️ 图标尺寸过大可能遮挡过多二维码数据，建议控制在30%以内。")
+    st.sidebar.warning('⚠️ 图标尺寸过大可能遮挡过多二维码数据，建议控制在30%以内。')
 
 # 生成二维码函数
 def generate_qr_code(data, fill_color, back_color, box_size, border, error_level, logo=None, logo_size=25, use_default=False):
