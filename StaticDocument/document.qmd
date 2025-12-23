@@ -1,6 +1,6 @@
 ---
-title: "静态文档示例"
-author: "技术文档团队"
+title: "API 开发文档与规范"
+author: "技术委员会"
 date: 2025-12-23
 format:
   html:
@@ -9,44 +9,66 @@ format:
     css: styles.css
 ---
 
-# 📄 欢迎访问静态文档
+# 📘 API 开发文档
 
-> 本页面展示了如何在 Posit Connect 上托管静态 HTML 文档
+> **典型用途：知识库与文档 (Knowledge Base)**
+> 
+> 静态文档虽然没有后端计算，但对于发布技术规范、API 文档、团队手册至关重要。
+> Posit Connect 可以对这些文档进行**访问控制**（例如仅内部员工可见），这是普通静态托管难以做到的。
 
-## 功能特点
+## 1. 认证 (Authentication)
 
-### 支持的内容类型
-- **技术文档**：API 文档、用户手册
-- **项目报告**：项目总结、进度报告
-- **演示文稿**：培训材料、演讲稿
+所有 API 请求必须包含 `Authorization` 头。
 
-### 优势
-1. **轻量级**：无需服务器端计算
-2. **快速加载**：纯 HTML/CSS/JS
-3. **易于维护**：Markdown 编写
-
-## 示例表格
-
-| 框架 | 类型 | 适用场景 |
-|------|------|---------|
-| Streamlit | 动态应用 | 数据探索 |
-| Quarto | 文档系统 | 技术报告 |
-| Static Document | 静态页面 | 说明文档 |
-
-## 代码示例
-
-```python
-# Python 代码示例
-def greet(name):
-    return f"Hello, {name}!"
-
-print(greet("Posit Connect"))
+```http
+GET /api/v1/resource HTTP/1.1
+Host: api.example.com
+Authorization: Bearer <your_token>
 ```
+
+## 2. 响应状态码
+
+| 状态码 | 描述 | 含义 |
+|--------|------|------|
+| `200` | OK | 请求成功 |
+| `400` | Bad Request | 请求参数错误 |
+| `401` | Unauthorized | 未授权 |
+| `500` | Server Error | 服务器内部错误 |
+
+## 3. 示例端点
+
+### 获取用户信息
+
+`GET /users/{id}`
+
+**请求参数**:
+
+- `id` (int): 用户唯一标识符
+
+**响应示例**:
+
+```json
+{
+  "id": 101,
+  "name": "John Doe",
+  "role": "admin",
+  "active": true
+}
+```
+
+::: {.callout-warning}
+## 注意事项
+请勿在客户端代码中硬编码 API 密钥。
+:::
+
+## 4. 样式指南
+
+我们遵循 [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)。
+
+- 使用 `snake_case` 命名变量
+- 使用 `CamelCase` 命名类
+- 缩进使用 4 个空格
 
 ---
 
-**部署方式**：
-```bash
-quarto render document.qmd
-# 生成的 HTML 文件自动发布到 Posit Connect
-```
+*文档生成于: `r Sys.Date()`*

@@ -1,82 +1,92 @@
 import streamlit as st
-import geopandas as gpd
-import leafmap.foliumap as leafmap
-import fiona
-import os
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix
 
-# 1. 页面配置
-st.set_page_config(page_title="GIS 矢量数据云处理器", layout="wide")
+# -----------------------------------------------------------------------------
+# 典型用途：机器学习快速原型 (ML Prototyping)
+# 核心特色：Script-to-App 模式，无需懂前端即可快速将 Python 脚本转化为交互式应用
+# -----------------------------------------------------------------------------
 
-st.title("🛰️ 矢量数据空间分析平台 (GeoJSON/KML)")
+st.set_page_config(page_title="ML 模型演练场", page_icon="🤖", layout="wide")
+
+st.title("🤖 机器学习模型演练场")
 st.markdown("""
-本工具展示了**服务器后端**对专业 GIS 格式的处理：
-- **解析**：读取并转换 KML/GeoJSON。
-- **分析**：执行坐标系转换 (CRS) 并计算缓冲区。
-- **分发**：提供处理后的地理数据下载。
+> **Streamlit 特色展示**：
+> 这是一个典型的 ML 原型应用。通过侧边栏调整超参数，实时触发模型训练并可视化结果。
+> 这种"所见即所得"的开发模式是 Streamlit 最大的优势。
 """)
 
-# 开启 fiona 对 KML 的驱动支持
-fiona.drvsupport.supported_drivers['KML'] = 'rw'
-
-# 2. 侧边栏：参数
-st.sidebar.header("分析参数")
-dist_meters = st.sidebar.number_input("缓冲区距离 (米)", min_value=1, max_value=5000, value=500)
-output_format = st.sidebar.selectbox("输出格式", ["GeoJSON", "KML"])
-
-# 3. 文件上传
-uploaded_file = st.file_uploader("上传 GeoJSON 或 KML 文件", type=['json', 'geojson', 'kml'])
-
-if uploaded_file is not None:
-    # 保存临时文件以便 geopandas 读取 (KML 必须通过文件路径读取)
-    with open(uploaded_file.name, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+# 1. 数据加载
+with st.sidebar:
+    st.header("1. 模型配置")
+    st.info("使用经典的 Iris 鸢尾花数据集")
     
-    try:
-        # 4. 后端处理逻辑
-        st.info("正在解析矢量图层...")
-        
-        # 读取数据 (自动识别驱动)
-        gdf = gpd.read_file(uploaded_file.name)
-        
-        # 核心：为了以“米”为单位计算缓冲区，必须先投影到 Web Mercator (EPSG:3857)
-        gdf_projected = gdf.to_crs(epsg=3857)
-        gdf_buffer = gdf_projected.buffer(dist_meters)
-        
-        # 转回地理坐标系 (WGS84) 用于地图显示
-        gdf_result = gpd.GeoDataFrame(gdf.copy(), geometry=gdf_buffer).to_crs(epsg=4326)
-        gdf_original = gdf.to_crs(epsg=4326)
+    n_estimators = st.slider("决策树数量 (n_estimators)", 10, 200, 100, 10)
+    max_depth = st.slider("最大深度 (max_depth)", 1, 20, 5)
+    criterion = st.selectbox("分裂标准", ["gini", "entropy"])
 
-        # 5. 地图可视化
-        st.subheader("空间分析预览")
-        m = leafmap.Map(google_map="HYBRID")
-        m.add_gdf(gdf_original, layer_name="原始数据", style={'color': 'blue', 'weight': 2})
-        m.add_gdf(gdf_result, layer_name="分析结果", fill_colors=["yellow"], fill_opacity=0.4)
-        m.zoom_to_gdf(gdf_original)
-        m.to_streamlit(height=600)
+# 加载数据
+@st.cache_data
+def load_data():
+    df = sns.load_dataset('iris')
+    return df
 
-        # 6. 导出与下载
-        st.subheader("📥 结果下载")
-        temp_output = f"result.{output_format.lower()}"
-        
-        if output_format == "GeoJSON":
-            gdf_result.to_file(temp_output, driver='GeoJSON')
-        else:
-            gdf_result.to_file(temp_output, driver='KML')
+df = load_data()
 
-        with open(temp_output, "rb") as f:
-            st.download_button(
-                label=f"导出为 {output_format}",
-                data=f,
-                file_name=temp_output,
-                mime="application/octet-stream"
-            )
-            
-        # 清理临时文件
-        os.remove(uploaded_file.name)
-        os.remove(temp_output)
+# 2. 页面布局 - 数据概览
+col1, col2 = st.columns([1, 2])
 
-    except Exception as e:
-        st.error(f"处理失败: {e}")
-        st.info("提示：如果是 KML 文件，请确保其包含有效的几何要素。")
-else:
-    st.warning("请上传一个包含空间要素的文件开始分析。")
+with col1:
+    st.subheader("原始数据")
+    st.dataframe(df.head(10), use_container_width=True)
+    st.caption(f"总样本数: {len(df)}")
+
+with col2:
+    st.subheader("特征分布")
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.scatterplot(data=df, x='sepal_length', y='sepal_width', hue='species', ax=ax)
+    st.pyplot(fig)
+
+# 3. 模型训练
+st.divider()
+st.subheader("2. 模型训练与评估")
+
+# 准备数据
+X = df.drop('species', axis=1)
+y = df['species']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# 训练
+clf = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, criterion=criterion)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+
+# 指标
+acc = accuracy_score(y_test, y_pred)
+
+# 显示指标卡片
+m1, m2, m3 = st.columns(3)
+m1.metric("模型准确率 (Accuracy)", f"{acc:.2%}", delta=f"{acc-0.9:.2%}")
+m2.metric("训练样本数", len(X_train))
+m3.metric("测试样本数", len(X_test))
+
+# 4. 结果可视化
+c1, c2 = st.columns(2)
+
+with c1:
+    st.markdown("#### 混淆矩阵")
+    cm = confusion_matrix(y_test, y_pred)
+    fig_cm, ax_cm = plt.subplots()
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
+    st.pyplot(fig_cm)
+
+with c2:
+    st.markdown("#### 特征重要性")
+    feat_importances = pd.Series(clf.feature_importances_, index=X.columns)
+    st.bar_chart(feat_importances)
+
+st.success("✅ 模型训练完成！尝试调整侧边栏参数来优化模型。")

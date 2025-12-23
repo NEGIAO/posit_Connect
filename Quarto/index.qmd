@@ -1,20 +1,42 @@
 ---
-title: "Quarto 交互式报告"
-author: "数据分析团队"
+title: "气候变化影响评估报告"
+subtitle: "基于 Quarto 的学术出版级文档示例"
+author:
+  - name: "张三"
+    affiliation: "环境科学研究所"
+    email: "zhangsan@example.com"
 date: today
 format:
   html:
-    code-fold: true
-    toc: true
     theme: cosmo
+    toc: true
+    number-sections: true
+    code-fold: true
+bibliography: references.bib
 jupyter: python3
 ---
 
-## 项目概述
+## 1. 摘要 (Abstract)
 
-本报告展示了如何使用 Quarto 在 Posit Connect 上发布动态文档。
+本文档展示了 **Quarto** 在学术和技术出版领域的典型应用。Quarto 支持混合代码、数学公式、引用和交互式图表，是生成高质量可重现报告的理想工具。
 
-## 数据分析
+## 2. 引言
+
+全球变暖是当今世界面临的严峻挑战。根据 IPCC 的报告，温室气体排放是主要原因。
+
+> **Quarto 特色**：支持 LaTeX 风格的数学公式渲染。
+
+能量平衡方程可以表示为：
+
+$$
+(1 - \alpha) S_{avg} = \sigma T_e^4
+$$
+
+其中 $\alpha$ 是反照率，$S_{avg}$ 是平均太阳辐射。
+
+## 3. 数据分析
+
+我们使用 Python 分析过去 100 年的全球气温异常数据。
 
 ```{python}
 #| label: setup
@@ -28,61 +50,54 @@ import plotly.graph_objects as go
 np.random.seed(42)
 ```
 
-### 数据生成
+### 3.1 数据模拟
 
 ```{python}
-#| label: data-generation
+#| label: data-gen
+#| echo: true
 
-# 创建示例数据
-df = pd.DataFrame({
-    'x': range(1, 101),
-    'y': np.cumsum(np.random.randn(100)),
-    'category': np.random.choice(['A', 'B', 'C'], 100)
-})
+# 模拟气温上升趋势
+years = np.arange(1920, 2025)
+baseline = 0
+trend = 0.015 * (years - 1920) # 线性趋势
+noise = np.random.normal(0, 0.1, len(years)) # 随机波动
+anomaly = baseline + trend + noise
 
-df.head()
+df = pd.DataFrame({'Year': years, 'Anomaly': anomaly})
 ```
 
-### 可视化
+### 3.2 趋势可视化
+
+@fig-trend 展示了气温异常的时间序列。
 
 ```{python}
-#| label: fig-scatter
-#| fig-cap: "交互式散点图"
+#| label: fig-trend
+#| fig-cap: "全球气温异常趋势 (1920-2024)"
 
-fig = px.scatter(
-    df, 
-    x='x', 
-    y='y', 
-    color='category',
-    title='数据分布可视化',
-    template='plotly_white'
-)
-fig.update_traces(marker=dict(size=8))
+fig = px.scatter(df, x='Year', y='Anomaly', trendline="lowess", 
+                 title="Global Temperature Anomaly",
+                 template="plotly_white")
+fig.update_traces(marker=dict(size=6, color='#FF6B6B', opacity=0.6))
+fig.update_layout(yaxis_title="Temperature Anomaly (°C)")
 fig.show()
 ```
 
-### 统计摘要
+## 4. 交互式探索
 
-```{python}
-#| label: tbl-summary
-#| tbl-cap: "描述性统计"
-
-df.groupby('category')['y'].describe().round(2)
-```
-
-## 结论
+Quarto 支持嵌入交互式组件。
 
 ::: {.callout-note}
-## 要点总结
-- Quarto 支持 Python、R、Julia 等多种语言
-- 可导出为 HTML、PDF、Word 等多种格式
-- 与 Posit Connect 无缝集成
+## 关键发现
+从 @fig-trend 可以看出，自 1980 年代以来，气温上升速度明显加快。
 :::
+
+## 5. 结论
+
+Quarto 结合了 Jupyter Notebook 的交互性和 LaTeX 的排版质量，是现代科学传播的利器。
 
 ---
 
-**部署命令**：
-```bash
-quarto render
-# 推送到 Git 仓库即可自动发布
-```
+**参考文献**
+
+1. IPCC. (2021). *Climate Change 2021: The Physical Science Basis*.
+2. Wickham, H. (2016). *ggplot2: Elegant Graphics for Data Analysis*.

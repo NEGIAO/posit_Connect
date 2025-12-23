@@ -1,73 +1,81 @@
 from bokeh.plotting import figure, curdoc
-from bokeh.layouts import column, row
-from bokeh.models import Select, Slider
+from bokeh.layouts import gridplot, column
+from bokeh.models import ColumnDataSource, HoverTool, Div
+from bokeh.transform import factor_cmap
+from bokeh.palettes import Spectral6
 import numpy as np
+import pandas as pd
 
-# 初始化数据
-x = np.linspace(0, 4*np.pi, 100)
-y = np.sin(x)
+# -----------------------------------------------------------------------------
+# 典型用途：多图联动数据探索 (Linked Brushing)
+# 核心特色：
+# 1. 客户端高性能交互 (Canvas 渲染)
+# 2. 共享数据源 (ColumnDataSource) 实现多图选择联动
+# 3. 适合探索高维数据的相关性
+# -----------------------------------------------------------------------------
 
-# 创建图表
-plot = figure(
-    title="📈 Bokeh 交互式可视化",
-    x_axis_label='X',
-    y_axis_label='Y',
-    width=800,
-    height=400
-)
-line = plot.line(x, y, line_width=2, color='#00D9FF')
+# 1. 准备数据
+# 模拟一个多维数据集 (例如：汽车性能数据)
+N = 300
+data = {
+    'mpg': np.random.normal(20, 5, N),
+    'hp': np.random.normal(150, 50, N),
+    'weight': np.random.normal(3000, 500, N),
+    'accel': np.random.normal(15, 3, N),
+    'cylinders': np.random.choice(['4', '6', '8'], N)
+}
+source = ColumnDataSource(data=data)
 
-# 控件
-function_select = Select(
-    title="函数类型:",
-    value="sin",
-    options=["sin", "cos", "tan"]
-)
+# 2. 创建工具
+TOOLS = "box_select,lasso_select,reset,help,wheel_zoom,pan"
 
-frequency_slider = Slider(
-    title="频率",
-    start=0.1,
-    end=5,
-    value=1,
-    step=0.1
-)
+# 3. 创建三个联动图表
+# 图1: 马力 vs 油耗
+p1 = figure(tools=TOOLS, width=400, height=350, title="马力 (HP) vs 油耗 (MPG)")
+p1.scatter('hp', 'mpg', source=source, size=8, alpha=0.6,
+           color=factor_cmap('cylinders', palette=Spectral6, factors=['4', '6', '8']),
+           legend_group='cylinders')
+p1.xaxis.axis_label = "Horsepower"
+p1.yaxis.axis_label = "MPG"
 
-amplitude_slider = Slider(
-    title="振幅",
-    start=0.1,
-    end=5,
-    value=1,
-    step=0.1
-)
+# 图2: 重量 vs 加速
+p2 = figure(tools=TOOLS, width=400, height=350, title="重量 (Weight) vs 加速 (Accel)")
+p2.scatter('weight', 'accel', source=source, size=8, alpha=0.6,
+           color=factor_cmap('cylinders', palette=Spectral6, factors=['4', '6', '8']))
+p2.xaxis.axis_label = "Weight"
+p2.yaxis.axis_label = "Acceleration"
 
-# 回调函数
-def update():
-    func = function_select.value
-    freq = frequency_slider.value
-    amp = amplitude_slider.value
-    
-    x_new = np.linspace(0, 4*np.pi, 100)
-    
-    if func == "sin":
-        y_new = amp * np.sin(freq * x_new)
-    elif func == "cos":
-        y_new = amp * np.cos(freq * x_new)
-    else:
-        y_new = amp * np.tan(freq * x_new)
-        y_new = np.clip(y_new, -10, 10)  # 限制 tan 值范围
-    
-    line.data_source.data = {'x': x_new, 'y': y_new}
+# 图3: 马力 vs 重量
+p3 = figure(tools=TOOLS, width=400, height=350, title="马力 (HP) vs 重量 (Weight)")
+p3.scatter('hp', 'weight', source=source, size=8, alpha=0.6,
+           color=factor_cmap('cylinders', palette=Spectral6, factors=['4', '6', '8']))
+p3.xaxis.axis_label = "Horsepower"
+p3.yaxis.axis_label = "Weight"
 
-# 绑定事件
-function_select.on_change('value', lambda attr, old, new: update())
-frequency_slider.on_change('value', lambda attr, old, new: update())
-amplitude_slider.on_change('value', lambda attr, old, new: update())
+# 4. 添加 Hover 工具 (所有图表共享)
+hover = HoverTool(tooltips=[
+    ("Cylinders", "@cylinders"),
+    ("MPG", "@mpg{0.0}"),
+    ("HP", "@hp{0}"),
+    ("Weight", "@weight{0}")
+])
+p1.add_tools(hover)
+p2.add_tools(hover)
+p3.add_tools(hover)
 
-# 布局
-layout = column(
-    row(function_select, frequency_slider, amplitude_slider),
-    plot
-)
+# 5. 布局与说明
+desc = Div(text="""
+<h1>🔍 Bokeh 多图联动探索</h1>
+<p><b>操作指南：</b></p>
+<ul>
+    <li>使用 <b>Box Select (矩形选择)</b> 或 <b>Lasso Select (套索选择)</b> 工具在任意图表中选中点。</li>
+    <li>观察其他图表中对应的点也会被<b>高亮显示</b>。</li>
+    <li>这种 <i>Linked Brushing</i> 技术是发现多维数据相关性的利器。</li>
+</ul>
+<hr>
+""", width=800)
+
+layout = column(desc, gridplot([[p1, p2], [p3, None]]))
 
 curdoc().add_root(layout)
-curdoc().title = "Bokeh 应用"
+curdoc().title = "Bokeh Linked Brushing"

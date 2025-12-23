@@ -1,104 +1,105 @@
 ---
-title: "R Markdown 数据报告"
-author: "统计分析团队"
+title: "区域销售业绩月度报告"
+author: "销售运营部"
 date: "`r Sys.Date()`"
 output:
   html_document:
+    theme: flatly
     toc: true
-    toc_float: true
-    theme: cosmo
-    highlight: tango
+params:
+  region: "North America"
+  min_sales: 1000
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-```
-
-## 📊 项目背景
-
-本报告使用 R Markdown 展示统计分析流程，适合发布到 Posit Connect。
-
-## 📦 加载库
-
-```{r libraries}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(ggplot2)
 library(dplyr)
-library(tidyr)
 library(knitr)
 ```
 
-## 📈 数据分析
+# 📋 报告概览
 
-### 数据生成
+> **典型用途：参数化报告 (Parameterized Reporting)**
+> 
+> R Markdown 的杀手级功能。这份报告可以根据 `params` 中的 `region` 参数自动生成不同版本。
+> 在 Posit Connect 上，你可以设置计划任务，每周一自动生成并发送 "北美区"、"亚太区" 等不同版本的报告给对应的负责人。
 
-```{r data-generation}
-set.seed(42)
-
-df <- data.frame(
-  x = 1:100,
-  y = cumsum(rnorm(100)),
-  category = sample(c('Alpha', 'Beta', 'Gamma'), 100, replace = TRUE)
-)
-
-head(df) %>% kable(caption = "数据预览")
-```
-
-### 描述性统计
-
-```{r summary-stats}
-df %>%
-  group_by(category) %>%
-  summarise(
-    均值 = mean(y),
-    标准差 = sd(y),
-    最大值 = max(y),
-    最小值 = min(y)
-  ) %>%
-  kable(digits = 2, caption = "分类统计摘要")
-```
-
-### 可视化
-
-```{r plot, fig.width=10, fig.height=6}
-ggplot(df, aes(x = x, y = y, color = category)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 2, alpha = 0.6) +
-  scale_color_manual(values = c('#00D9FF', '#FF6B6B', '#4ECDC4')) +
-  theme_minimal() +
-  labs(
-    title = "时间序列数据可视化",
-    subtitle = "按类别分组",
-    x = "时间点",
-    y = "累积值",
-    color = "类别"
-  ) +
-  theme(
-    plot.title = element_text(size = 16, face = "bold"),
-    legend.position = "top"
-  )
-```
-
-```{r boxplot, fig.width=8, fig.height=5}
-ggplot(df, aes(x = category, y = y, fill = category)) +
-  geom_boxplot(alpha = 0.7) +
-  scale_fill_manual(values = c('#00D9FF', '#FF6B6B', '#4ECDC4')) +
-  theme_minimal() +
-  labs(
-    title = "数据分布箱线图",
-    x = "类别",
-    y = "数值"
-  ) +
-  theme(legend.position = "none")
-```
-
-## 📝 结论
-
-通过 R Markdown，我们可以：
-
-- ✅ 整合代码、可视化和文本
-- ✅ 生成可重现的分析报告
-- ✅ 轻松发布到 Posit Connect
+**当前报告区域**: `r params$region`  
+**销售额阈值**: `r params$min_sales`
 
 ---
 
-**部署说明**：将 `.Rmd` 文件推送到 Git 仓库，Posit Connect 将自动渲染并发布。
+```{r data-generation}
+# 模拟数据
+set.seed(123)
+regions <- c("North America", "Europe", "Asia Pacific", "Latin America")
+products <- c("Laptop", "Phone", "Tablet", "Accessories")
+
+data <- data.frame(
+  Date = seq(as.Date("2024-01-01"), as.Date("2024-12-31"), by="day"),
+  Region = sample(regions, 366, replace = TRUE),
+  Product = sample(products, 366, replace = TRUE),
+  Sales = round(rnorm(366, mean = 2000, sd = 500), 2)
+)
+
+# 根据参数过滤数据
+filtered_data <- data %>%
+  filter(Region == params$region, Sales >= params$min_sales)
+```
+
+## 1. 关键指标 (KPIs)
+
+```{r kpi}
+total_sales <- sum(filtered_data$Sales)
+avg_sales <- mean(filtered_data$Sales)
+top_product <- names(which.max(table(filtered_data$Product)))
+
+kpi_df <- data.frame(
+  指标 = c("总销售额", "平均客单价", "最畅销产品"),
+  数值 = c(paste0("$", format(total_sales, big.mark=",")), 
+         paste0("$", format(round(avg_sales, 2), big.mark=",")), 
+         top_product)
+)
+
+kable(kpi_df, caption = "本月核心业绩指标")
+```
+
+## 2. 销售趋势分析
+
+```{r trend-plot, fig.width=10}
+ggplot(filtered_data, aes(x = Date, y = Sales)) +
+  geom_line(color = "#2c3e50", alpha = 0.3) +
+  geom_smooth(method = "loess", color = "#00D9FF", fill = "#00D9FF", alpha = 0.2) +
+  geom_point(aes(color = Product), size = 2) +
+  theme_minimal() +
+  labs(title = paste(params$region, "销售趋势图"),
+       subtitle = "包含趋势线拟合",
+       y = "销售额 ($)") +
+  theme(legend.position = "bottom")
+```
+
+## 3. 产品表现
+
+```{r product-bar}
+product_summary <- filtered_data %>%
+  group_by(Product) %>%
+  summarise(Total = sum(Sales)) %>%
+  arrange(desc(Total))
+
+ggplot(product_summary, aes(x = reorder(Product, Total), y = Total, fill = Product)) +
+  geom_col() +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "各产品线总销售额", x = "", y = "总销售额") +
+  theme(legend.position = "none")
+```
+
+## 4. 详细数据 (Top 10)
+
+```{r data-table}
+filtered_data %>%
+  arrange(desc(Sales)) %>%
+  head(10) %>%
+  kable(caption = "销售额最高的 10 笔订单")
+```
