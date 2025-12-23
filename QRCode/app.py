@@ -66,6 +66,14 @@ st.sidebar.subheader("📐 尺寸设置")
 box_size = st.sidebar.slider("像素块大小", 10, 30, 15, help="控制二维码的精细程度，值越大越清晰")
 border = st.sidebar.slider("边框宽度", 1, 10, 1, help="二维码周围的空白边框")
 
+dpi_options = [72, 150, 300, 600]
+output_dpi = st.sidebar.select_slider(
+    "输出 DPI (分辨率)",
+    options=dpi_options,
+    value=300,
+    help="DPI越高图片越清晰，72适合屏幕显示，300适合打印，600适合高质量印刷"
+)
+
 error_correction = st.sidebar.selectbox(
     "容错级别",
     ["低 (L - 7%)", "中 (M - 15%)", "高 (Q - 25%)", "极高 (H - 30%)"],
@@ -87,6 +95,7 @@ logo_option = st.sidebar.radio("图标来源", ["无图标", "使用默认图标
 
 logo_file = None
 use_default_logo = False
+logo_size = 20  # 默认值
 
 if logo_option == "使用默认图标":
     use_default_logo = True
@@ -98,8 +107,6 @@ elif logo_option == "上传自定义图标":
     logo_file = st.sidebar.file_uploader("上传中心图标 (PNG/JPG)", type=["png", "jpg", "jpeg"])
     if logo_file:
         logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 30, 20, help="图标相对于二维码的大小，建议不超过30%以确保可识别性")
-else:
-    logo_size = 20
 
 # 智能提示：检查容错级别与图标的匹配
 if (logo_option != "无图标") and (error_correction in ["低 (L - 7%)", "中 (M - 15%)"]):
@@ -178,6 +185,7 @@ if content:
         st.write(f"- **背景色**: `{back_color}`")
         st.write(f"- **像素块大小**: {box_size} (高清晰度)")
         st.write(f"- **边框宽度**: {border}")
+        st.write(f"- **输出 DPI**: {output_dpi}")
         st.write(f"- **容错级别**: {error_correction}")
         if logo_option == "使用默认图标":
             st.write(f"- **中心图标**: ✅ 默认图标 ({logo_size}%)")
@@ -206,16 +214,16 @@ if content:
             # 显示二维码
             st.image(qr_img, use_container_width=True)
             
-            # 转换为字节流用于下载 - 使用高DPI
+            # 转换为字节流用于下载 - 使用用户选择的DPI
             buf = io.BytesIO()
-            qr_img.save(buf, format='PNG', dpi=(300, 300))
+            qr_img.save(buf, format='PNG', dpi=(output_dpi, output_dpi))
             byte_img = buf.getvalue()
             
             # 下载按钮
             st.download_button(
-                label="📥 下载高清二维码 (300 DPI)",
+                label=f"📥 下载二维码 ({output_dpi} DPI)",
                 data=byte_img,
-                file_name="qrcode_hd.png",
+                file_name=f"qrcode_{output_dpi}dpi.png",
                 mime="image/png",
                 type="primary"
             )
@@ -270,15 +278,21 @@ st.markdown("""
 1. 在左侧选择内容类型（文本/网址）并输入内容
 2. 选择预设样式或自定义颜色
 3. 调整像素块大小（推荐15-20以获得高清晰度）
-4. 选择容错级别（**添加图标必须选择"高"或"极高"**）
-5. （可选）选择默认图标或上传自定义图标（**建议图标大小≤30%**）
-6. 点击"下载高清二维码"保存 300 DPI 的高清图片
+4. 选择输出DPI（72=屏幕显示，300=打印，600=高质量印刷）
+5. 选择容错级别（**添加图标必须选择"高"或"极高"**）
+6. （可选）选择默认图标或上传自定义图标（**建议图标大小≤30%**）
+7. 点击下载按钮保存指定 DPI 的二维码图片
 
 **重要提示**:  
 - 添加中心图标会遮挡部分二维码数据，必须配合**高容错级别**（Q或H）才能确保可识别  
 - 图标大小建议控制在**20-30%**之间，过大会导致无法扫描  
 - 系统会自动为图标添加白色背景边距，提高识别率
 
-**高清输出**: 生成的二维码为 300 DPI，适合打印和大尺寸显示  
+**DPI 说明**: 72 DPI适合屏幕查看，300 DPI适合普通打印，600 DPI适合专业印刷  
 **技术支持**: 基于 `qrcode` 和 `Pillow` 库构建
+
+---
+
+**👤 关于作者**  
+💻 [访问作者主页](https://negiao-pages.share.connect.posit.cloud/) | 📧 联系作者获取更多工具与支持
 """)
