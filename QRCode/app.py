@@ -1,14 +1,26 @@
 import streamlit as st
 import qrcode
-from PIL import Image
+from PIL import Image, ImageDraw
 import io
 import base64
+import os
 
 # 设置页面配置
 st.set_page_config(page_title="二维码生成器", page_icon="📱", layout="wide")
 
 st.title("📱 自定义二维码生成器")
 st.markdown("生成个性化二维码，支持自定义颜色、样式和中心图标")
+
+# 预设样式
+PRESET_STYLES = {
+    "经典黑白": {"fill": "#000000", "back": "#FFFFFF", "desc": "传统二维码样式"},
+    "商务蓝": {"fill": "#1E3A8A", "back": "#F0F9FF", "desc": "专业商务风格"},
+    "活力橙": {"fill": "#EA580C", "back": "#FFF7ED", "desc": "充满活力的暖色调"},
+    "自然绿": {"fill": "#15803D", "back": "#F0FDF4", "desc": "清新自然风格"},
+    "浪漫粉": {"fill": "#BE185D", "back": "#FDF2F8", "desc": "温馨浪漫氛围"},
+    "科技紫": {"fill": "#6B21A8", "back": "#FAF5FF", "desc": "科技感十足"},
+    "自定义": {"fill": "#000000", "back": "#FFFFFF", "desc": "完全自定义颜色"}
+}
 
 # 侧边栏配置
 st.sidebar.header("⚙️ 二维码配置")
@@ -21,24 +33,44 @@ if content_type == "文本":
 else:
     content = st.sidebar.text_input("输入网址", placeholder="https://example.com")
 
-# 2. 样式配置
+# 2. 预设样式选择
 st.sidebar.subheader("🎨 样式配置")
+style_choice = st.sidebar.selectbox(
+    "选择预设样式",
+    list(PRESET_STYLES.keys()),
+    help="选择预设配色方案"
+)
 
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    fill_color = st.color_picker("前景色", "#000000")
-with col2:
-    back_color = st.color_picker("背景色", "#FFFFFF")
+# 显示样式说明
+st.sidebar.caption(f"💡 {PRESET_STYLES[style_choice]['desc']}")
+
+# 颜色配置
+if style_choice == "自定义":
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        fill_color = st.color_picker("前景色", PRESET_STYLES[style_choice]["fill"])
+    with col2:
+        back_color = st.color_picker("背景色", PRESET_STYLES[style_choice]["back"])
+else:
+    fill_color = PRESET_STYLES[style_choice]["fill"]
+    back_color = PRESET_STYLES[style_choice]["back"]
+    # 显示当前配色
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        st.color_picker("前景色", fill_color, disabled=True)
+    with col2:
+        st.color_picker("背景色", back_color, disabled=True)
 
 # 3. 尺寸和容错级别
-box_size = st.sidebar.slider("像素块大小", 5, 20, 10, help="控制二维码的精细程度")
+st.sidebar.subheader("📐 尺寸设置")
+box_size = st.sidebar.slider("像素块大小", 10, 30, 15, help="控制二维码的精细程度，值越大越清晰")
 border = st.sidebar.slider("边框宽度", 1, 10, 4, help="二维码周围的空白边框")
 
 error_correction = st.sidebar.selectbox(
     "容错级别",
     ["低 (L - 7%)", "中 (M - 15%)", "高 (Q - 25%)", "极高 (H - 30%)"],
-    index=1,
-    help="容错级别越高，二维码越密集，但可承受更多损坏"
+    index=2,
+    help="容错级别越高，二维码越密集，但可承受更多损坏。添加中心图标建议选择"高"或"极高""
 )
 
 # 错误纠正级别映射
@@ -49,16 +81,29 @@ error_map = {
     "极高 (H - 30%)": qrcode.constants.ERROR_CORRECT_H
 }
 
-# 4. 中心图标上传
+# 4. 中心图标配置
 st.sidebar.subheader("🖼️ 中心图标 (可选)")
-logo_file = st.sidebar.file_uploader("上传中心图标 (PNG/JPG)", type=["png", "jpg", "jpeg"])
+logo_option = st.sidebar.radio("图标来源", ["无图标", "使用默认图标", "上传自定义图标"])
 
-if logo_file:
-    logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 40, 20, help="图标相对于二维码的大小")
+logo_file = None
+use_default_logo = False
+
+if logo_option == "使用默认图标":
+    use_default_logo = True
+    default_logo_path = "icon.png"
+    if os.path.exists(default_logo_path):
+        st.sidebar.image(default_logo_path, width=100, caption="默认图标预览")
+    logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 40, 25, help="图标相对于二维码的大小")
+elif logo_option == "上传自定义图标":
+    logo_file = st.sidebar.file_uploader("上传中心图标 (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    if logo_file:
+        logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 40, 25, help="图标相对于二维码的大小")
+else:
+    logo_size = 25
 
 # 生成二维码函数
-def generate_qr_code(data, fill_color, back_color, box_size, border, error_level, logo=None, logo_size=20):
-    """生成二维码"""
+def generate_qr_code(data, fill_color, back_color, box_size, border, error_level, logo=None, logo_size=25, use_default=False):
+    """生成高清二维码"""
     qr = qrcode.QRCode(
         version=1,
         error_correction=error_level,
@@ -72,9 +117,19 @@ def generate_qr_code(data, fill_color, back_color, box_size, border, error_level
     img = qr.make_image(fill_color=fill_color, back_color=back_color)
     img = img.convert("RGB")
     
+    # 处理中心图标
+    logo_to_use = None
+    if use_default and os.path.exists("icon.png"):
+        logo_to_use = "icon.png"
+    elif logo:
+        logo_to_use = logo
+    
     # 如果有 logo，添加到中心
-    if logo:
-        logo_img = Image.open(logo)
+    if logo_to_use:
+        if isinstance(logo_to_use, str):
+            logo_img = Image.open(logo_to_use)
+        else:
+            logo_img = Image.open(logo_to_use)
         
         # 计算 logo 尺寸
         qr_width, qr_height = img.size
@@ -83,14 +138,22 @@ def generate_qr_code(data, fill_color, back_color, box_size, border, error_level
         # 调整 logo 大小，保持比例
         logo_img.thumbnail((logo_max_size, logo_max_size), Image.Resampling.LANCZOS)
         
+        # 为logo添加白色背景（防止与二维码冲突）
+        logo_bg = Image.new('RGB', (logo_img.size[0] + 20, logo_img.size[1] + 20), back_color)
+        logo_bg_pos = (10, 10)
+        if logo_img.mode == 'RGBA':
+            logo_bg.paste(logo_img, logo_bg_pos, logo_img)
+        else:
+            logo_bg.paste(logo_img, logo_bg_pos)
+        
         # 计算居中位置
         logo_pos = (
-            (qr_width - logo_img.size[0]) // 2,
-            (qr_height - logo_img.size[1]) // 2
+            (qr_width - logo_bg.size[0]) // 2,
+            (qr_height - logo_bg.size[1]) // 2
         )
         
         # 粘贴 logo
-        img.paste(logo_img, logo_pos)
+        img.paste(logo_bg, logo_pos)
     
     return img
 
@@ -103,13 +166,18 @@ if content:
         st.info(f"**类型**: {content_type}\n\n**内容**: {content[:100]}{'...' if len(content) > 100 else ''}")
         
         st.subheader("🎯 生成设置")
+        st.write(f"- **样式**: {style_choice}")
         st.write(f"- **前景色**: `{fill_color}`")
         st.write(f"- **背景色**: `{back_color}`")
-        st.write(f"- **像素块大小**: {box_size}")
+        st.write(f"- **像素块大小**: {box_size} (高清晰度)")
         st.write(f"- **边框宽度**: {border}")
         st.write(f"- **容错级别**: {error_correction}")
-        if logo_file:
-            st.write(f"- **中心图标**: ✅ 已上传 ({logo_size}%)")
+        if logo_option == "使用默认图标":
+            st.write(f"- **中心图标**: ✅ 默认图标 ({logo_size}%)")
+        elif logo_file:
+            st.write(f"- **中心图标**: ✅ 自定义图标 ({logo_size}%)")
+        else:
+            st.write(f"- **中心图标**: ❌ 无")
     
     with col2:
         st.subheader("🖼️ 二维码预览")
@@ -124,22 +192,23 @@ if content:
                 border,
                 error_map[error_correction],
                 logo_file if logo_file else None,
-                logo_size if logo_file else 20
+                logo_size,
+                use_default_logo
             )
             
             # 显示二维码
             st.image(qr_img, use_container_width=True)
             
-            # 转换为字节流用于下载
+            # 转换为字节流用于下载 - 使用高DPI
             buf = io.BytesIO()
-            qr_img.save(buf, format='PNG')
+            qr_img.save(buf, format='PNG', dpi=(300, 300))
             byte_img = buf.getvalue()
             
             # 下载按钮
             st.download_button(
-                label="📥 下载二维码",
+                label="📥 下载高清二维码 (300 DPI)",
                 data=byte_img,
-                file_name="qrcode.png",
+                file_name="qrcode_hd.png",
                 mime="image/png",
                 type="primary"
             )
@@ -149,37 +218,55 @@ if content:
 else:
     st.info("👈 请在左侧输入内容以生成二维码")
     
-    # 显示示例
-    st.subheader("💡 使用示例")
-    col1, col2, col3 = st.columns(3)
+    # 显示预设样式示例
+    st.subheader("🎨 预设样式示例")
     
-    with col1:
-        st.markdown("### 文本二维码")
-        st.write("输入任意文本，生成可扫描的二维码")
-        example_qr1 = generate_qr_code("Hello, World!", "#000000", "#FFFFFF", 10, 4, qrcode.constants.ERROR_CORRECT_M)
-        st.image(example_qr1, width=200)
+    cols = st.columns(4)
+    style_names = ["经典黑白", "商务蓝", "活力橙", "自然绿"]
     
-    with col2:
-        st.markdown("### 网址二维码")
-        st.write("输入网址，扫描后直接跳转")
-        example_qr2 = generate_qr_code("https://github.com", "#1F77B4", "#FFFFFF", 10, 4, qrcode.constants.ERROR_CORRECT_M)
-        st.image(example_qr2, width=200)
+    for idx, style_name in enumerate(style_names):
+        with cols[idx]:
+            st.markdown(f"### {style_name}")
+            st.caption(PRESET_STYLES[style_name]['desc'])
+            example_qr = generate_qr_code(
+                "示例二维码", 
+                PRESET_STYLES[style_name]['fill'], 
+                PRESET_STYLES[style_name]['back'], 
+                12, 
+                4, 
+                qrcode.constants.ERROR_CORRECT_M
+            )
+            st.image(example_qr, width=180)
     
-    with col3:
-        st.markdown("### 彩色二维码")
-        st.write("自定义颜色，打造个性风格")
-        example_qr3 = generate_qr_code("Colorful QR Code", "#FF6B6B", "#FFF3E0", 10, 4, qrcode.constants.ERROR_CORRECT_M)
-        st.image(example_qr3, width=200)
+    # 第二行
+    cols2 = st.columns(4)
+    style_names2 = ["浪漫粉", "科技紫"]
+    
+    for idx, style_name in enumerate(style_names2):
+        with cols2[idx]:
+            st.markdown(f"### {style_name}")
+            st.caption(PRESET_STYLES[style_name]['desc'])
+            example_qr = generate_qr_code(
+                "示例二维码", 
+                PRESET_STYLES[style_name]['fill'], 
+                PRESET_STYLES[style_name]['back'], 
+                12, 
+                4, 
+                qrcode.constants.ERROR_CORRECT_M
+            )
+            st.image(example_qr, width=180)
 
 # 页脚说明
 st.markdown("---")
 st.markdown("""
 **使用说明：**
-1. 在左侧选择内容类型（文本/网址）
-2. 输入要生成二维码的内容
-3. 自定义颜色、尺寸和容错级别
-4. （可选）上传中心图标（建议使用正方形图片）
-5. 点击"下载二维码"保存图片
+1. 在左侧选择内容类型（文本/网址）并输入内容
+2. 选择预设样式或自定义颜色
+3. 调整像素块大小（推荐15-20以获得高清晰度）
+4. 选择容错级别（添加图标建议选择"高"或"极高"）
+5. （可选）选择默认图标或上传自定义图标
+6. 点击"下载高清二维码"保存 300 DPI 的高清图片
 
+**高清输出**: 生成的二维码为 300 DPI，适合打印和大尺寸显示  
 **技术支持**: 基于 `qrcode` 和 `Pillow` 库构建
 """)
