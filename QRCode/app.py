@@ -102,7 +102,7 @@ logo_size = 20  # 默认值
 
 if logo_option == "使用默认图标":
     use_default_logo = True
-    default_logo_path = "icon.png"
+    default_logo_path = "icon.jpg"
     if os.path.exists(default_logo_path):
         st.sidebar.image(default_logo_path, width=100, caption="默认图标预览")
     logo_size = st.sidebar.slider("图标大小比例 (%)", 10, 30, 20, help="图标相对于二维码的大小，建议不超过30%以确保可识别性")
