@@ -11,6 +11,9 @@ st.set_page_config(page_title="二维码生成器", page_icon="📱", layout="wi
 st.title("📱 自定义二维码生成器")
 st.markdown("生成个性化二维码，支持自定义颜色、样式和中心图标")
 
+# 作者信息
+st.info("👤 **作者主页**: [点击访问 NEGIAO 主页](https://negiao-pages.share.connect.posit.cloud/) | 💬 欢迎联系交流与反馈")
+
 # 预设样式
 PRESET_STYLES = {
     "经典黑白": {"fill": "#000000", "back": "#FFFFFF", "desc": "传统二维码样式"},
@@ -290,9 +293,4 @@ st.markdown("""
 
 **DPI 说明**: 72 DPI适合屏幕查看，300 DPI适合普通打印，600 DPI适合专业印刷  
 **技术支持**: 基于 `qrcode` 和 `Pillow` 库构建
-
----
-
-**👤 关于作者**  
-💻 [访问作者主页](https://negiao-pages.share.connect.posit.cloud/) | 📧 联系作者获取更多工具与支持
 """)
