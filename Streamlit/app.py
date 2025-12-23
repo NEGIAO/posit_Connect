@@ -77,23 +77,23 @@ if df is not None:
     
     # 为了在 multiselect 中显示 None，我们需要处理一下
     # n_estimators
-    n_estimators_opts = st.sidebar.multiselect("n_estimators", [100, 200, 300, 500], default=[100, 200, 300])
+    n_estimators_opts = st.sidebar.multiselect("n_estimators", [100, 200, 300, 500], default=[100, 200, 300, 500])
     if not n_estimators_opts: n_estimators_opts = [100]
     
     # max_depth
     # 使用字符串 'None' 来代表 None，然后在参数构建时转换回去
     max_depth_options = ['None', 15, 25, 40]
-    max_depth_sel = st.sidebar.multiselect("max_depth", max_depth_options, default=['None', 15, 25])
+    max_depth_sel = st.sidebar.multiselect("max_depth", max_depth_options, default=['None', 15, 25, 40])
     max_depth_opts = [None if x == 'None' else x for x in max_depth_sel]
     if not max_depth_opts: max_depth_opts = [None]
 
     # min_samples_split
-    min_samples_split_opts = st.sidebar.multiselect("min_samples_split", [2, 5, 10], default=[2, 5])
+    min_samples_split_opts = st.sidebar.multiselect("min_samples_split", [2, 5, 10], default=[2, 5, 10])
     if not min_samples_split_opts: min_samples_split_opts = [2]
 
     # max_features
     max_features_options = ['sqrt', 'log2', 'None']
-    max_features_sel = st.sidebar.multiselect("max_features", max_features_options, default=['sqrt', 'log2'])
+    max_features_sel = st.sidebar.multiselect("max_features", max_features_options, default=['sqrt', 'log2', 'None'])
     max_features_opts = [None if x == 'None' else x for x in max_features_sel]
     if not max_features_opts: max_features_opts = ['sqrt']
 
