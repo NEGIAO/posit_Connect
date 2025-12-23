@@ -80,7 +80,7 @@ output_dpi = st.sidebar.select_slider(
 error_correction = st.sidebar.selectbox(
     "容错级别",
     ["低 (L - 7%)", "中 (M - 15%)", "高 (Q - 25%)", "极高 (H - 30%)"],
-    index=2,
+    index=3,
     help='容错级别越高，二维码越密集，但可承受更多损坏。添加中心图标建议选择"高"或"极高"'
 )
 
@@ -136,8 +136,8 @@ def generate_qr_code(data, fill_color, back_color, box_size, border, error_level
     
     # 处理中心图标
     logo_to_use = None
-    if use_default and os.path.exists("icon.png"):
-        logo_to_use = "icon.png"
+    if use_default and os.path.exists("icon.jpg"):
+        logo_to_use = "icon.jpg"
     elif logo:
         logo_to_use = logo
     
