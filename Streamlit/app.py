@@ -1,92 +1,147 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
+import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import classification_report
+import os
 
-# -----------------------------------------------------------------------------
-# 典型用途：机器学习快速原型 (ML Prototyping)
-# 核心特色：Script-to-App 模式，无需懂前端即可快速将 Python 脚本转化为交互式应用
-# -----------------------------------------------------------------------------
+# 设置页面配置
+st.set_page_config(page_title="随机森林分类 (Random Forest)", page_icon="🌲", layout="wide")
 
-st.set_page_config(page_title="ML 模型演练场", page_icon="🤖", layout="wide")
+st.title("🌲 随机森林分类与网格搜索")
+st.markdown("基于 Sentinel-2 数据和 NDVI 的分类模型训练与评估")
 
-st.title("🤖 机器学习模型演练场")
-st.markdown("""
-> **Streamlit 特色展示**：
-> 这是一个典型的 ML 原型应用。通过侧边栏调整超参数，实时触发模型训练并可视化结果。
-> 这种"所见即所得"的开发模式是 Streamlit 最大的优势。
-""")
+# 1. 加载数据
+st.sidebar.header("1. 数据配置")
+uploaded_file = st.sidebar.file_uploader("上传 CSV 文件", type=["csv"])
 
-# 1. 数据加载
-with st.sidebar:
-    st.header("1. 模型配置")
-    st.info("使用经典的 Iris 鸢尾花数据集")
+# 尝试加载本地默认文件
+default_path = 'Data/nanyang_samples.csv'
+df = None
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.sidebar.success("已加载上传的文件")
+elif os.path.exists(default_path):
+    df = pd.read_csv(default_path)
+    st.sidebar.info(f"已加载默认文件: {default_path}")
+else:
+    st.warning(f"请上传 CSV 文件或确保项目目录下存在 '{default_path}'。")
+    st.stop()
+
+if df is not None:
+    with st.expander("数据预览", expanded=True):
+        st.dataframe(df.head())
+
+    # 2. 特征列表
+    all_columns = df.columns.tolist()
     
-    n_estimators = st.slider("决策树数量 (n_estimators)", 10, 200, 100, 10)
-    max_depth = st.slider("最大深度 (max_depth)", 1, 20, 5)
-    criterion = st.selectbox("分裂标准", ["gini", "entropy"])
+    # 默认特征
+    default_bands = ['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12', 'NDVI']
+    # 检查默认特征是否都在列中
+    valid_default_bands = [b for b in default_bands if b in all_columns]
+    
+    st.sidebar.header("2. 特征与标签选择")
+    bands = st.sidebar.multiselect("选择特征 (Bands)", all_columns, default=valid_default_bands)
+    
+    # 默认标签
+    default_label = 'class' if 'class' in all_columns else (all_columns[-1] if all_columns else None)
+    
+    if default_label:
+        label_index = all_columns.index(default_label)
+    else:
+        label_index = 0
+        
+    label = st.sidebar.selectbox("选择标签 (Label)", all_columns, index=label_index)
 
-# 加载数据
-@st.cache_data
-def load_data():
-    df = sns.load_dataset('iris')
-    return df
+    if not bands:
+        st.error("请至少选择一个特征。")
+        st.stop()
 
-df = load_data()
+    # 数据预处理：删除采样中产生的空值
+    df_clean = df.dropna(subset=bands + [label])
+    X = df_clean[bands]
+    y = df_clean[label]
+    
+    st.sidebar.markdown(f"**有效样本数:** {len(df_clean)}")
 
-# 2. 页面布局 - 数据概览
-col1, col2 = st.columns([1, 2])
+    # 3. 划分数据集
+    test_size = st.sidebar.slider("测试集比例", 0.1, 0.5, 0.3, 0.05)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
-with col1:
-    st.subheader("原始数据")
-    st.dataframe(df.head(10), use_container_width=True)
-    st.caption(f"总样本数: {len(df)}")
+    # 4. 针对 10 个特征调整搜索网格
+    st.sidebar.header("3. 网格搜索参数")
+    
+    # 为了在 multiselect 中显示 None，我们需要处理一下
+    # n_estimators
+    n_estimators_opts = st.sidebar.multiselect("n_estimators", [100, 200, 300, 500], default=[100, 200, 300])
+    if not n_estimators_opts: n_estimators_opts = [100]
+    
+    # max_depth
+    # 使用字符串 'None' 来代表 None，然后在参数构建时转换回去
+    max_depth_options = ['None', 15, 25, 40]
+    max_depth_sel = st.sidebar.multiselect("max_depth", max_depth_options, default=['None', 15, 25])
+    max_depth_opts = [None if x == 'None' else x for x in max_depth_sel]
+    if not max_depth_opts: max_depth_opts = [None]
 
-with col2:
-    st.subheader("特征分布")
-    fig, ax = plt.subplots(figsize=(10, 4))
-    sns.scatterplot(data=df, x='sepal_length', y='sepal_width', hue='species', ax=ax)
-    st.pyplot(fig)
+    # min_samples_split
+    min_samples_split_opts = st.sidebar.multiselect("min_samples_split", [2, 5, 10], default=[2, 5])
+    if not min_samples_split_opts: min_samples_split_opts = [2]
 
-# 3. 模型训练
-st.divider()
-st.subheader("2. 模型训练与评估")
+    # max_features
+    max_features_options = ['sqrt', 'log2', 'None']
+    max_features_sel = st.sidebar.multiselect("max_features", max_features_options, default=['sqrt', 'log2'])
+    max_features_opts = [None if x == 'None' else x for x in max_features_sel]
+    if not max_features_opts: max_features_opts = ['sqrt']
 
-# 准备数据
-X = df.drop('species', axis=1)
-y = df['species']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    param_grid = {
+        'n_estimators': n_estimators_opts,
+        'max_depth': max_depth_opts,
+        'min_samples_split': min_samples_split_opts,
+        'max_features': max_features_opts
+    }
 
-# 训练
-clf = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, criterion=criterion)
-clf.fit(X_train, y_train)
-y_pred = clf.predict(X_test)
+    if st.button("开始训练 (Grid Search)", type="primary"):
+        with st.spinner('正在执行网格搜索，请稍候...'):
+            # 5. 执行网格搜索
+            rf = RandomForestClassifier(random_state=42, n_jobs=-1)
+            grid_search = GridSearchCV(rf, param_grid, cv=5, scoring='accuracy', verbose=1)
+            grid_search.fit(X_train, y_train)
 
-# 指标
-acc = accuracy_score(y_test, y_pred)
+            # 6. 结果展示
+            st.success("训练完成！")
+            
+            st.subheader("最佳参数与精度")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("最佳参数:")
+                st.json(grid_search.best_params_)
+            with col2:
+                st.metric("交叉验证最高精度 (OA)", f"{grid_search.best_score_:.4f}")
 
-# 显示指标卡片
-m1, m2, m3 = st.columns(3)
-m1.metric("模型准确率 (Accuracy)", f"{acc:.2%}", delta=f"{acc-0.9:.2%}")
-m2.metric("训练样本数", len(X_train))
-m3.metric("测试样本数", len(X_test))
+            # 7. 测试集评估
+            best_rf = grid_search.best_estimator_
+            y_pred = best_rf.predict(X_test)
+            
+            st.subheader("测试集分类报告")
+            report_dict = classification_report(y_test, y_pred, output_dict=True)
+            st.dataframe(pd.DataFrame(report_dict).transpose().style.format("{:.4f}"))
 
-# 4. 结果可视化
-c1, c2 = st.columns(2)
+            # 8. 特征重要性排序图
+            st.subheader("特征重要性")
+            importances = best_rf.feature_importances_
+            indices = np.argsort(importances)[::-1]
 
-with c1:
-    st.markdown("#### 混淆矩阵")
-    cm = confusion_matrix(y_test, y_pred)
-    fig_cm, ax_cm = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
-    st.pyplot(fig_cm)
-
-with c2:
-    st.markdown("#### 特征重要性")
-    feat_importances = pd.Series(clf.feature_importances_, index=X.columns)
-    st.bar_chart(feat_importances)
-
-st.success("✅ 模型训练完成！尝试调整侧边栏参数来优化模型。")
+            fig, ax = plt.subplots(figsize=(12, 6))
+            ax.set_title("Feature Importances (Sentinel-2 + NDVI)")
+            sns.barplot(x=[bands[i] for i in indices], y=importances[indices], palette="magma", ax=ax)
+            ax.set_ylabel("Importance Score")
+            ax.set_xlabel("Bands")
+            
+            # 自动调整布局
+            plt.tight_layout()
+            
+            st.pyplot(fig)
