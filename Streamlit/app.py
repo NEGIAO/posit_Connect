@@ -7,12 +7,20 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import classification_report
 import os
+import time
 
 # 设置页面配置
 st.set_page_config(page_title="随机森林分类 (Random Forest)", page_icon="🌲", layout="wide")
 
 st.title("🌲 随机森林分类与网格搜索")
 st.markdown("基于 Sentinel-2 数据和 NDVI 的分类模型训练与评估")
+
+st.info("""
+**💡 提示 / Note**
+本演示运行在云端服务器 (2 vCPU, 4GB RAM)。
+经测试，**全参数网格搜索**大约需要 **5 分钟** 即可完成，且结果与本地计算一致。
+您可以放心运行完整流程，或直接查看下方“3. 运行结果”章节中的静态展示。
+""")
 
 # 1. 加载数据
 st.sidebar.header("1. 数据配置")
@@ -103,16 +111,30 @@ if df is not None:
         'min_samples_split': min_samples_split_opts,
         'max_features': max_features_opts
     }
+    
+    # 计算总拟合次数
+    total_combinations = len(n_estimators_opts) * len(max_depth_opts) * len(min_samples_split_opts) * len(max_features_opts)
+    total_fits = total_combinations * 5
+    
+    st.sidebar.markdown("---")
+    st.sidebar.info(f"📊 当前配置:\n- 参数组合数: {total_combinations}\n- 总拟合次数 (CV=5): {total_fits}")
+    
+    if total_fits > 50:
+        st.sidebar.warning("⚠️ 训练次数较多 (>50)，在低配置服务器上可能需要数分钟，建议减少参数范围。")
 
     if st.button("开始训练 (Grid Search)", type="primary"):
-        with st.spinner('正在执行网格搜索，请稍候...'):
+        start_time = time.time()
+        with st.spinner(f'正在执行网格搜索 (共 {total_fits} 次拟合)，请稍候...'):
             # 5. 执行网格搜索
             rf = RandomForestClassifier(random_state=42, n_jobs=-1)
             grid_search = GridSearchCV(rf, param_grid, cv=5, scoring='accuracy', verbose=1)
             grid_search.fit(X_train, y_train)
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
 
-            # 6. 结果展示
-            st.success("训练完成！")
+        # 6. 结果展示
+        st.success(f"✅ 训练完成！总耗时: {elapsed_time:.2f} 秒")
             
             st.subheader("最佳参数与精度")
             col1, col2 = st.columns(2)
