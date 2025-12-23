@@ -29,12 +29,51 @@ PRESET_STYLES = {
 st.sidebar.header("⚙️ 二维码配置")
 
 # 1. 内容输入
-content_type = st.sidebar.radio("内容类型", ["文本", "网址"])
+content_type = st.sidebar.radio("内容类型", ["文本", "网址", "联系方式/名片", "批量网址"])
 
 if content_type == "文本":
     content = st.sidebar.text_area("输入文本内容", height=100, placeholder="请输入要生成二维码的文本...")
+    batch_mode = False
+elif content_type == "联系方式/名片":
+    st.sidebar.markdown("**📇 填写联系信息**")
+    vcard_name = st.sidebar.text_input("姓名", placeholder="张三")
+    vcard_tel = st.sidebar.text_input("电话", placeholder="138-0000-0000")
+    vcard_email = st.sidebar.text_input("邮箱", placeholder="example@email.com")
+    vcard_wechat = st.sidebar.text_input("微信号", placeholder="WeChat ID")
+    vcard_qq = st.sidebar.text_input("QQ", placeholder="12345678")
+    vcard_alipay = st.sidebar.text_input("支付宝", placeholder="Alipay账号")
+    vcard_address = st.sidebar.text_input("地址", placeholder="公司/家庭地址")
+    vcard_company = st.sidebar.text_input("公司/组织", placeholder="公司名称")
+    vcard_title = st.sidebar.text_input("职位", placeholder="职位名称")
+    vcard_website = st.sidebar.text_input("网站", placeholder="https://example.com")
+    vcard_note = st.sidebar.text_area("备注", height=60, placeholder="其他信息")
+    
+    # 组合信息
+    contact_info = []
+    if vcard_name: contact_info.append(f"姓名: {vcard_name}")
+    if vcard_title: contact_info.append(f"职位: {vcard_title}")
+    if vcard_company: contact_info.append(f"公司: {vcard_company}")
+    if vcard_tel: contact_info.append(f"电话: {vcard_tel}")
+    if vcard_email: contact_info.append(f"邮箱: {vcard_email}")
+    if vcard_wechat: contact_info.append(f"微信: {vcard_wechat}")
+    if vcard_qq: contact_info.append(f"QQ: {vcard_qq}")
+    if vcard_alipay: contact_info.append(f"支付宝: {vcard_alipay}")
+    if vcard_website: contact_info.append(f"网站: {vcard_website}")
+    if vcard_address: contact_info.append(f"地址: {vcard_address}")
+    if vcard_note: contact_info.append(f"备注: {vcard_note}")
+    
+    content = "\n".join(contact_info) if contact_info else ""
+    batch_mode = False
+elif content_type == "批量网址":
+    content = st.sidebar.text_area(
+        "输入多个网址（每行一个）", 
+        height=150, 
+        placeholder="https://example1.com\nhttps://example2.com\nhttps://example3.com"
+    )
+    batch_mode = True
 else:
     content = st.sidebar.text_input("输入网址", placeholder="https://example.com")
+    batch_mode = False
 
 # 2. 预设样式选择
 st.sidebar.subheader("🎨 样式配置")
@@ -176,63 +215,126 @@ def generate_qr_code(data, fill_color, back_color, box_size, border, error_level
 
 # 主界面
 if content:
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("📋 内容预览")
-        st.info(f"**类型**: {content_type}\n\n**内容**: {content[:100]}{'...' if len(content) > 100 else ''}")
+    # 批量模式处理
+    if batch_mode:
+        urls = [url.strip() for url in content.split('\n') if url.strip()]
         
-        st.subheader("🎯 生成设置")
-        st.write(f"- **样式**: {style_choice}")
-        st.write(f"- **前景色**: `{fill_color}`")
-        st.write(f"- **背景色**: `{back_color}`")
-        st.write(f"- **像素块大小**: {box_size} (高清晰度)")
-        st.write(f"- **边框宽度**: {border}")
-        st.write(f"- **输出 DPI**: {output_dpi}")
-        st.write(f"- **容错级别**: {error_correction}")
-        if logo_option == "使用默认图标":
-            st.write(f"- **中心图标**: ✅ 默认图标 ({logo_size}%)")
-        elif logo_file:
-            st.write(f"- **中心图标**: ✅ 自定义图标 ({logo_size}%)")
+        if urls:
+            st.subheader(f"📦 批量生成 - 共 {len(urls)} 个二维码")
+            
+            # 生成设置信息
+            with st.expander("🎯 生成设置", expanded=False):
+                st.write(f"- **样式**: {style_choice}")
+                st.write(f"- **前景色**: `{fill_color}` | **背景色**: `{back_color}`")
+                st.write(f"- **像素块**: {box_size} | **边框**: {border} | **DPI**: {output_dpi}")
+                st.write(f"- **容错级别**: {error_correction}")
+                if logo_option == "使用默认图标":
+                    st.write(f"- **中心图标**: ✅ 默认图标 ({logo_size}%)")
+                elif logo_file:
+                    st.write(f"- **中心图标**: ✅ 自定义图标 ({logo_size}%)")
+            
+            # 生成所有二维码
+            qr_images = []
+            for idx, url in enumerate(urls, 1):
+                try:
+                    qr_img = generate_qr_code(
+                        url,
+                        fill_color,
+                        back_color,
+                        box_size,
+                        border,
+                        error_map[error_correction],
+                        logo_file if logo_file else None,
+                        logo_size,
+                        use_default_logo
+                    )
+                    qr_images.append((url, qr_img))
+                except Exception as e:
+                    st.error(f"❌ 第 {idx} 个网址生成失败: {url}\n错误: {str(e)}")
+            
+            # 网格展示
+            cols_per_row = 3
+            for i in range(0, len(qr_images), cols_per_row):
+                cols = st.columns(cols_per_row)
+                for j, (url, qr_img) in enumerate(qr_images[i:i+cols_per_row]):
+                    with cols[j]:
+                        st.image(qr_img, use_container_width=True)
+                        st.caption(f"🔗 {url[:40]}{'...' if len(url) > 40 else ''}")
+                        
+                        # 单个下载按钮
+                        buf = io.BytesIO()
+                        qr_img.save(buf, format='PNG', dpi=(output_dpi, output_dpi))
+                        st.download_button(
+                            label="📥 下载",
+                            data=buf.getvalue(),
+                            file_name=f"qrcode_{i+j+1}.png",
+                            mime="image/png",
+                            key=f"download_{i+j}"
+                        )
+            
+            st.success(f"✅ 成功生成 {len(qr_images)} 个二维码")
         else:
-            st.write(f"- **中心图标**: ❌ 无")
+            st.warning("请输入至少一个网址")
     
-    with col2:
-        st.subheader("🖼️ 二维码预览")
+    # 单个模式处理
+    else:
+        col1, col2 = st.columns([1, 1])
         
-        try:
-            # 生成二维码
-            qr_img = generate_qr_code(
-                content,
-                fill_color,
-                back_color,
-                box_size,
-                border,
-                error_map[error_correction],
-                logo_file if logo_file else None,
-                logo_size,
-                use_default_logo
-            )
+        with col1:
+            st.subheader("📋 内容预览")
+            st.info(f"**类型**: {content_type}\n\n**内容**: {content[:100]}{'...' if len(content) > 100 else ''}")
             
-            # 显示二维码
-            st.image(qr_img, use_container_width=True)
+            st.subheader("🎯 生成设置")
+            st.write(f"- **样式**: {style_choice}")
+            st.write(f"- **前景色**: `{fill_color}`")
+            st.write(f"- **背景色**: `{back_color}`")
+            st.write(f"- **像素块大小**: {box_size} (高清晰度)")
+            st.write(f"- **边框宽度**: {border}")
+            st.write(f"- **输出 DPI**: {output_dpi}")
+            st.write(f"- **容错级别**: {error_correction}")
+            if logo_option == "使用默认图标":
+                st.write(f"- **中心图标**: ✅ 默认图标 ({logo_size}%)")
+            elif logo_file:
+                st.write(f"- **中心图标**: ✅ 自定义图标 ({logo_size}%)")
+            else:
+                st.write(f"- **中心图标**: ❌ 无")
+        
+        with col2:
+            st.subheader("🖼️ 二维码预览")
             
-            # 转换为字节流用于下载 - 使用用户选择的DPI
-            buf = io.BytesIO()
-            qr_img.save(buf, format='PNG', dpi=(output_dpi, output_dpi))
-            byte_img = buf.getvalue()
+            try:
+                # 生成二维码
+                qr_img = generate_qr_code(
+                    content,
+                    fill_color,
+                    back_color,
+                    box_size,
+                    border,
+                    error_map[error_correction],
+                    logo_file if logo_file else None,
+                    logo_size,
+                    use_default_logo
+                )
+                
+                # 显示二维码
+                st.image(qr_img, use_container_width=True)
+                
+                # 转换为字节流用于下载 - 使用用户选择的DPI
+                buf = io.BytesIO()
+                qr_img.save(buf, format='PNG', dpi=(output_dpi, output_dpi))
+                byte_img = buf.getvalue()
+                
+                # 下载按钮
+                st.download_button(
+                    label=f"📥 下载二维码 ({output_dpi} DPI)",
+                    data=byte_img,
+                    file_name=f"qrcode_{output_dpi}dpi.png",
+                    mime="image/png",
+                    type="primary"
+                )
             
-            # 下载按钮
-            st.download_button(
-                label=f"📥 下载二维码 ({output_dpi} DPI)",
-                data=byte_img,
-                file_name=f"qrcode_{output_dpi}dpi.png",
-                mime="image/png",
-                type="primary"
-            )
-            
-        except Exception as e:
-            st.error(f"生成失败: {str(e)}")
+            except Exception as e:
+                st.error(f"生成失败: {str(e)}")
 else:
     st.info("👈 请在左侧输入内容以生成二维码")
     
