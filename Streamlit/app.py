@@ -135,35 +135,35 @@ if df is not None:
 
         # 6. 结果展示
         st.success(f"✅ 训练完成！总耗时: {elapsed_time:.2f} 秒")
-            
-            st.subheader("最佳参数与精度")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write("最佳参数:")
-                st.json(grid_search.best_params_)
-            with col2:
-                st.metric("交叉验证最高精度 (OA)", f"{grid_search.best_score_:.4f}")
+        
+        st.subheader("最佳参数与精度")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("最佳参数:")
+            st.json(grid_search.best_params_)
+        with col2:
+            st.metric("交叉验证最高精度 (OA)", f"{grid_search.best_score_:.4f}")
 
-            # 7. 测试集评估
-            best_rf = grid_search.best_estimator_
-            y_pred = best_rf.predict(X_test)
-            
-            st.subheader("测试集分类报告")
-            report_dict = classification_report(y_test, y_pred, output_dict=True)
-            st.dataframe(pd.DataFrame(report_dict).transpose().style.format("{:.4f}"))
+        # 7. 测试集评估
+        best_rf = grid_search.best_estimator_
+        y_pred = best_rf.predict(X_test)
+        
+        st.subheader("测试集分类报告")
+        report_dict = classification_report(y_test, y_pred, output_dict=True)
+        st.dataframe(pd.DataFrame(report_dict).transpose().style.format("{:.4f}"))
 
-            # 8. 特征重要性排序图
-            st.subheader("特征重要性")
-            importances = best_rf.feature_importances_
-            indices = np.argsort(importances)[::-1]
+        # 8. 特征重要性排序图
+        st.subheader("特征重要性")
+        importances = best_rf.feature_importances_
+        indices = np.argsort(importances)[::-1]
 
-            fig, ax = plt.subplots(figsize=(12, 6))
-            ax.set_title("Feature Importances (Sentinel-2 + NDVI)")
-            sns.barplot(x=[bands[i] for i in indices], y=importances[indices], palette="magma", ax=ax)
-            ax.set_ylabel("Importance Score")
-            ax.set_xlabel("Bands")
-            
-            # 自动调整布局
-            plt.tight_layout()
-            
-            st.pyplot(fig)
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.set_title("Feature Importances (Sentinel-2 + NDVI)")
+        sns.barplot(x=[bands[i] for i in indices], y=importances[indices], palette="magma", ax=ax)
+        ax.set_ylabel("Importance Score")
+        ax.set_xlabel("Bands")
+        
+        # 自动调整布局
+        plt.tight_layout()
+        
+        st.pyplot(fig)
