@@ -9,7 +9,7 @@
 
 import streamlit as st
 import qrcode
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 import base64
 import os
@@ -33,7 +33,7 @@ class QRCodeConfig:
     
     # 尺寸相关
     box_size: int = 15
-    border: int = 1
+    border: int = 4
     dpi: int = 300
     
     # 容错级别
@@ -43,6 +43,15 @@ class QRCodeConfig:
     logo_option: str = "无图标"
     logo_size: int = 20
     logo_file: Optional[Any] = None
+
+    # 文字相关
+    top_text: str = ""
+    bottom_text: str = ""
+    font_size: int = 30
+    text_color: str = "#000000"
+    font_file: Optional[Any] = None
+    is_bold: bool = False
+    text_padding: int = 20
     
     # 联系方式相关
     vcard_data: Dict[str, str] = field(default_factory=dict)
@@ -134,9 +143,145 @@ class QRCodeGenerator:
         # 添加图标
         if self.config.logo_option != "无图标":
             img = self._add_logo(img, use_default_logo)
+            
+        # 添加文字
+        if self.config.top_text or self.config.bottom_text:
+            img = self._add_text(img)
         
         return img
     
+    def _add_text(self, img: Image.Image) -> Image.Image:
+        """添加顶部和底部文字"""
+        # 检查是否包含中文字符
+        def has_chinese(text):
+            return any('\u4e00' <= char <= '\u9fff' for char in text)
+            
+        # 加载字体
+        font = None
+        try:
+            if self.config.font_file:
+                if hasattr(self.config.font_file, 'seek'):
+                    self.config.font_file.seek(0)
+                font = ImageFont.truetype(self.config.font_file, self.config.font_size)
+            else:
+                # 根据内容选择默认字体
+                # 如果包含中文，优先使用宋体/黑体
+                # 如果是纯英文，优先使用 Times New Roman
+                text_content = (self.config.top_text or "") + (self.config.bottom_text or "")
+                
+                if has_chinese(text_content):
+                    # 中文优先字体列表：宋体 -> 微软雅黑 -> 黑体
+                    font_names = ["simsun.ttc", "simsun.ttf", "Microsoft YaHei.ttf", "SimHei.ttf", "STSong.ttf", "arial.ttf"]
+                else:
+                    # 英文优先字体列表：Times New Roman -> Arial
+                    font_names = ["times.ttf", "Times New Roman.ttf", "arial.ttf", "DejaVuSans.ttf", "FreeSans.ttf"]
+                
+                for name in font_names:
+                    try:
+                        font = ImageFont.truetype(name, self.config.font_size)
+                        break
+                    except:
+                        continue
+                
+                if font is None:
+                    # 如果找不到系统字体，使用默认字体（不支持大小调整，但总比报错好）
+                    font = ImageFont.load_default()
+        except Exception:
+            font = ImageFont.load_default()
+
+        draw = ImageDraw.Draw(img)
+        width, height = img.size
+        
+        # 计算二维码边框大小 (像素)
+        border_px = self.config.box_size * self.config.border
+        
+        # 计算文字高度
+        top_add = 0
+        bottom_add = 0
+        padding = self.config.text_padding
+        stroke_width = 1 if self.config.is_bold else 0
+        
+        if self.config.top_text:
+            text_h = 0
+            if hasattr(draw, 'textbbox'):
+                bbox = draw.textbbox((0, 0), self.config.top_text, font=font, stroke_width=stroke_width)
+                text_h = bbox[3] - bbox[1]
+            else:
+                text_h = self.config.font_size
+            
+            # 目标：文字距离二维码模块 padding 像素
+            # 现有边框: border_px
+            # 需要的总空间: text_h + padding * 2 (假设上下都有padding)
+            # 或者: 文字中心距离模块顶部 padding + text_h/2 ?
+            # 用户需求: "从二维码最顶部(模块)，到图片顶部的中间"
+            # 也就是说，文字应该位于 [图片顶部, 模块顶部] 这个区间的垂直居中位置
+            # 模块顶部位置(相对原图) = border_px
+            # 我们添加 top_add 像素
+            # 新的模块顶部位置 = top_add + border_px
+            # 顶部空白区域总高度 = top_add + border_px
+            # 我们希望文字在这个区域居中
+            # 另外，我们需要确保这个区域足够大，至少能放下文字 + padding
+            
+            min_top_space = text_h + padding * 2
+            top_add = max(0, min_top_space - border_px)
+            
+        if self.config.bottom_text:
+            text_h = 0
+            if hasattr(draw, 'textbbox'):
+                bbox = draw.textbbox((0, 0), self.config.bottom_text, font=font, stroke_width=stroke_width)
+                text_h = bbox[3] - bbox[1]
+            else:
+                text_h = self.config.font_size
+                
+            min_bottom_space = text_h + padding * 2
+            bottom_add = max(0, min_bottom_space - border_px)
+            
+        # 创建新图像
+        new_height = height + top_add + bottom_add
+        new_img = Image.new("RGB", (width, new_height), self.config.back_color)
+        
+        # 粘贴二维码
+        new_img.paste(img, (0, top_add))
+        
+        draw = ImageDraw.Draw(new_img)
+        
+        # 绘制顶部文字
+        if self.config.top_text:
+            if hasattr(draw, 'textbbox'):
+                bbox = draw.textbbox((0, 0), self.config.top_text, font=font, stroke_width=stroke_width)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+            else:
+                text_width = len(self.config.top_text) * self.config.font_size * 0.6
+                text_height = self.config.font_size
+                
+            x = (width - text_width) // 2
+            # 垂直居中于 [0, top_add + border_px]
+            # 中心点 = (top_add + border_px) / 2
+            # 文字顶部 = 中心点 - text_height / 2
+            y = (top_add + border_px - text_height) // 2
+            draw.text((x, y), self.config.top_text, font=font, fill=self.config.text_color, stroke_width=stroke_width, stroke_fill=self.config.text_color)
+            
+        # 绘制底部文字
+        if self.config.bottom_text:
+            if hasattr(draw, 'textbbox'):
+                bbox = draw.textbbox((0, 0), self.config.bottom_text, font=font, stroke_width=stroke_width)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+            else:
+                text_width = len(self.config.bottom_text) * self.config.font_size * 0.6
+                text_height = self.config.font_size
+                
+            x = (width - text_width) // 2
+            # 垂直居中于 [top_add + height - border_px, new_height]
+            # 区域高度 = border_px + bottom_add
+            # 区域顶部 = top_add + height - border_px
+            # 文字顶部 = 区域顶部 + (区域高度 - text_height) / 2
+            y = (top_add + height - border_px) + (border_px + bottom_add - text_height) // 2
+            draw.text((x, y), self.config.bottom_text, font=font, fill=self.config.text_color, stroke_width=stroke_width, stroke_fill=self.config.text_color)
+            
+        return new_img
+
     def _add_logo(self, img: Image.Image, use_default: bool) -> Image.Image:
         """在二维码中心添加图标"""
         logo_path = None
@@ -146,6 +291,8 @@ class QRCodeGenerator:
             logo_path = "icon.jpg"
             logo_img = Image.open(logo_path)
         elif self.config.logo_file:
+            if hasattr(self.config.logo_file, 'seek'):
+                self.config.logo_file.seek(0)
             logo_img = Image.open(self.config.logo_file)
         else:
             return img
@@ -316,7 +463,7 @@ else:
 # 3. 尺寸和容错级别
 st.sidebar.subheader("📐 尺寸设置")
 config.box_size = st.sidebar.slider("像素块大小", 10, 30, 15, help="控制二维码的精细程度")
-config.border = st.sidebar.slider("边框宽度", 1, 10, 1, help="二维码周围的空白边框")
+config.border = st.sidebar.slider("边框宽度", 1, 10, 4, help="二维码周围的空白边框")
 
 dpi_options = [72, 150, 300, 600]
 config.dpi = st.sidebar.select_slider(
@@ -356,6 +503,28 @@ if (logo_option != "无图标") and (config.error_correction in ["低 (L - 7%)",
 if (logo_option != "无图标") and config.logo_size > 30:
     st.sidebar.warning('⚠️ 图标尺寸过大可能遮挡过多二维码数据，建议控制在30%以内。')
 
+# 5. 文字说明配置
+st.sidebar.subheader("📝 文字说明 (可选)")
+config.top_text = st.sidebar.text_input("顶部文字", placeholder="例如：扫描二维码")
+config.bottom_text = st.sidebar.text_input("底部文字", placeholder="例如：关注公众号")
+
+if config.top_text or config.bottom_text:
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        config.font_size = st.number_input("字体大小", min_value=10, max_value=100, value=30)
+    with col2:
+        config.text_color = st.color_picker("文字颜色", "#000000")
+    
+    col3, col4 = st.sidebar.columns(2)
+    with col3:
+        config.is_bold = st.sidebar.checkbox("文字加粗", value=True)
+    with col4:
+        config.text_padding = st.sidebar.number_input("垂直边距", min_value=0, max_value=200, value=20, help="调整文字与二维码/边缘的距离")
+        
+    config.font_file = st.sidebar.file_uploader("上传字体文件 (TTF)", type=["ttf"])
+    if not config.font_file:
+        st.sidebar.caption("💡 未上传字体将尝试使用系统默认字体")
+
 
 # ========== 主界面渲染 ==========
 if config.content:
@@ -379,6 +548,9 @@ if config.content:
                     st.write(f"- **中心图标**: ✅ 默认图标 ({config.logo_size}%)")
                 elif config.logo_file:
                     st.write(f"- **中心图标**: ✅ 自定义图标 ({config.logo_size}%)")
+                
+                if config.top_text or config.bottom_text:
+                    st.write(f"- **文字说明**: 顶部: {config.top_text or '无'} | 底部: {config.bottom_text or '无'}")
             
             # 生成所有二维码
             qr_images = []
@@ -397,7 +569,12 @@ if config.content:
                         error_correction=config.error_correction,
                         logo_option=config.logo_option,
                         logo_size=config.logo_size,
-                        logo_file=config.logo_file
+                        logo_file=config.logo_file,
+                        top_text=config.top_text,
+                        bottom_text=config.bottom_text,
+                        font_size=config.font_size,
+                        text_color=config.text_color,
+                        font_file=config.font_file
                     )
                     url_generator = QRCodeGenerator(url_config)
                     qr_img = url_generator.generate(use_default_logo=use_default_logo)
@@ -457,6 +634,9 @@ if config.content:
                 st.write(f"- **中心图标**: ✅ 自定义图标 ({config.logo_size}%)")
             else:
                 st.write(f"- **中心图标**: ❌ 无")
+            
+            if config.top_text or config.bottom_text:
+                st.write(f"- **文字说明**: 顶部: {config.top_text or '无'} | 底部: {config.bottom_text or '无'}")
             
             # 显示二维码URL
             st.subheader("🔍 二维码URL")
