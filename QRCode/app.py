@@ -151,7 +151,12 @@ class QRCodeGenerator:
             border=self.config.border,
         )
         qr.add_data(content)
-        qr.make(fit=True)
+        try:
+            qr.make(fit=True)
+        except Exception as e:
+            if "Invalid version" in str(e):
+                raise ValueError("内容过多，无法生成二维码。\n建议：\n1. 减少文字内容\n2. 降低容错级别（如改为'低'）")
+            raise e
         
         # 获取模块绘制器
         module_drawer = QRCodeStyle.MODULE_DRAWERS.get(

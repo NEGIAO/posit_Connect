@@ -231,11 +231,14 @@
             
             .card.plain-text-mode {
                 min-height: 40vh;
+                /* 移动端适配：调整线条间距(2.2rem)和位置，匹配文字行高 */
+                background-size: 100% 2.2rem;
+                background-position: 0 0.8rem;
             }
             
             .card.plain-text-mode .content-text {
                 font-size: 1.1rem;
-                line-height: 1.8;
+                line-height: 2.2rem;
             }
             
             .vcard-item {
