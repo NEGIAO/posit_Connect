@@ -9,6 +9,15 @@
 
 import streamlit as st
 import qrcode
+from qrcode.image.styledpil import StyledPilImage, SolidFillColorMask
+from qrcode.image.styles.moduledrawers import (
+    SquareModuleDrawer,
+    GappedSquareModuleDrawer,
+    CircleModuleDrawer,
+    RoundedModuleDrawer,
+    VerticalBarsDrawer,
+    HorizontalBarsDrawer
+)
 from PIL import Image, ImageDraw, ImageFont
 import io
 import base64
@@ -30,6 +39,7 @@ class QRCodeConfig:
     style_preset: str = "经典黑白"
     fill_color: str = "#000000"
     back_color: str = "#FFFFFF"
+    module_drawer: str = "间隙方块 (Gapped)"
     
     # 尺寸相关
     box_size: int = 15
@@ -94,6 +104,15 @@ class QRCodeStyle:
         "高 (Q - 25%)": qrcode.constants.ERROR_CORRECT_Q,
         "极高 (H - 30%)": qrcode.constants.ERROR_CORRECT_H
     }
+
+    MODULE_DRAWERS = {
+        "方块 (默认)": SquareModuleDrawer(),
+        "圆点 (Circle)": CircleModuleDrawer(),
+        "圆角方块 (Rounded)": RoundedModuleDrawer(),
+        "间隙方块 (Gapped)": GappedSquareModuleDrawer(),
+        "竖条纹 (Vertical)": VerticalBarsDrawer(),
+        "横条纹 (Horizontal)": HorizontalBarsDrawer()
+    }
     
     @classmethod
     def get_colors(cls, preset: str) -> tuple:
@@ -134,10 +153,20 @@ class QRCodeGenerator:
         qr.add_data(content)
         qr.make(fit=True)
         
+        # 获取模块绘制器
+        module_drawer = QRCodeStyle.MODULE_DRAWERS.get(
+            self.config.module_drawer, 
+            SquareModuleDrawer()
+        )
+
         # 生成图像
         img = qr.make_image(
-            fill_color=self.config.fill_color, 
-            back_color=self.config.back_color
+            image_factory=StyledPilImage,
+            module_drawer=module_drawer,
+            color_mask=SolidFillColorMask(
+                back_color=tuple(int(self.config.back_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)),
+                front_color=tuple(int(self.config.fill_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+            )
         ).convert("RGB")
         
         # 添加图标
@@ -477,6 +506,14 @@ else:
         st.color_picker("前景色", config.fill_color, disabled=True)
     with col2:
         st.color_picker("背景色", config.back_color, disabled=True)
+
+# 码点样式选择
+config.module_drawer = st.sidebar.selectbox(
+    "码点样式",
+    list(QRCodeStyle.MODULE_DRAWERS.keys()),
+    index=3,
+    help="选择二维码数据点的形状"
+)
 
 # 3. 尺寸和容错级别
 st.sidebar.subheader("📐 尺寸设置")
