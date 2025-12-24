@@ -747,7 +747,7 @@ st.markdown("""
 **二维码工作原理：**
 - **网址类型**：二维码直接包含您输入的网址，扫描后直接访问
 - **其他类型**（文本/联系方式）：数据会编码到URL参数中，扫描后访问部署的网页自动解析显示
-- 部署地址：`https://negiao-pages.share.connect.posit.cloud/`
+- 部署地址：`https://negiao-pages.share.connect.posit.cloud/Others/decoder.html`
 
 **技术支持**: 基于面向对象设计，使用 `qrcode` 和 `Pillow` 库构建
 """)
