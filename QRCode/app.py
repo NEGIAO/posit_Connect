@@ -170,11 +170,29 @@ class QRCodeGenerator:
                 text_content = (self.config.top_text or "") + (self.config.bottom_text or "")
                 
                 if has_chinese(text_content):
-                    # 中文优先字体列表：宋体 -> 微软雅黑 -> 黑体
-                    font_names = ["simsun.ttc", "simsun.ttf", "Microsoft YaHei.ttf", "SimHei.ttf", "STSong.ttf", "arial.ttf"]
+                    # 中文优先字体列表
+                    font_names = [
+                        # 1. 项目本地字体 (推荐用户上传到 fonts/ 目录)
+                        "fonts/SimHei.ttf", "fonts/msyh.ttc", "fonts/simsun.ttc", "fonts/NotoSansSC-Regular.ttf",
+                        "SimHei.ttf", "msyh.ttc",
+                        # 2. Windows 系统字体
+                        "simsun.ttc", "simsun.ttf", "Microsoft YaHei.ttf", "SimHei.ttf", "STSong.ttf", "arial.ttf",
+                        # 3. Linux 服务器常见字体 (Debian/Ubuntu/CentOS/Alpine)
+                        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+                        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+                        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+                        "/usr/share/fonts/noto/NotoSansCJK-Regular.ttc",
+                        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                        "wqy-zenhei.ttc", "wqy-microhei.ttc", "DroidSansFallbackFull.ttf"
+                    ]
                 else:
-                    # 英文优先字体列表：Times New Roman -> Arial
-                    font_names = ["times.ttf", "Times New Roman.ttf", "arial.ttf", "DejaVuSans.ttf", "FreeSans.ttf"]
+                    # 英文优先字体列表
+                    font_names = [
+                        "fonts/times.ttf", "fonts/arial.ttf", "fonts/TimesNewRoman.ttf",
+                        "times.ttf", "Times New Roman.ttf", "arial.ttf", 
+                        "DejaVuSans.ttf", "FreeSans.ttf",
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                    ]
                 
                 for name in font_names:
                     try:
