@@ -366,6 +366,33 @@ class QRCodeGenerator:
         params = self.config.to_url_params()
         return f"{self.DEPLOY_URL}?{params}"
 
+    def generate_encoded_url(self) -> str:
+        """
+        生成带更多编码信息的URL（用于在部署页面解析）
+        包含: type, content 或 vcard, style, 前景/背景色及部分样式参数
+        """
+        # 基础参数
+        params: Dict[str, Any] = {
+            'type': self.config.content_type,
+        }
+
+        # 内容或vcard
+        if self.config.vcard_data:
+            params['vcard'] = json.dumps(self.config.vcard_data, ensure_ascii=False)
+        elif self.config.content:
+            params['content'] = self.config.content
+
+        # 样式相关（至少包含预设名，便于前端展示）
+        params['style'] = self.config.style_preset
+        params['fill'] = self.config.fill_color
+        params['back'] = self.config.back_color
+
+        # 可选的尺寸信息，方便复现二维码外观
+        params['box_size'] = str(self.config.box_size)
+        params['border'] = str(self.config.border)
+
+        return f"{self.DEPLOY_URL}?{urlencode(params, quote_via=quote)}"
+
 
 class VCardBuilder:
     """电子名片构建器"""
