@@ -22,85 +22,72 @@ streamlit run app.py
 
 ### 2. 样式自定义
 - **多种码点样式**：方块、圆点、圆角方块、间隙方块（默认）、竖条纹、横条纹
-- 7种预设配色：经典黑白、商务蓝、活力橙、自然绿、浪漫粉、科技紫、自定义
-- 自定义前景色和背景色
-- 可调节像素块大小、边框宽度
-- 多种DPI选项：72/150/300/600
-- **文字说明**：支持在二维码顶部和底部添加说明文字
-  - 自定义字体大小、颜色
-  - 支持文字加粗
-  - **智能字体支持**：优先使用本地 `fonts/` 目录字体，完美支持中文显示（解决Linux服务器乱码问题）
-  - 支持上传自定义字体文件
-  - 可调节文字垂直边距
 
-### 3. 高级功能
-- 添加中心图标（默认图标或上传自定义）
-- 四级容错：L/M/Q/H
-- URL数据编码
-- 批量生成
+# 📱 二维码生成器
 
-## 🎯 工作原理
+这是一个基于 Streamlit 的二维码生成器，已将核心生成逻辑抽离为模块 `qrcode_core.py`，便于维护与测试。
 
-**所有二维码都生成URL：**
+主要功能：
+- 支持 `网址` / `文本` / `联系方式(名片)` / `批量网址` 四种内容类型
+- 多种码点样式与预设配色，支持自定义前景/背景颜色
+- 可选中心图标、顶部/底部文字（支持中文字体优先查找本地 `fonts/`）
+- 可导出 PNG（可选 DPI）与批量生成下载
 
-1. **网址类型**：
-   ```
-   用户输入: https://github.com
-   二维码内容: https://github.com
-   ```
+## 本次更新
 
-2. **文本类型**：
-   ```
-   用户输入: Hello World
-   二维码内容: https://negiao-pages.share.connect.posit.cloud/Others/decoder.html?content=Hello%20World&type=文本&...
-   ```
+- 将核心类 `QRCodeConfig`, `QRCodeStyle`, `QRCodeGenerator`, `VCardBuilder` 提取到 `qrcode_core.py`，`app.py` 仅负责 UI（Streamlit）逻辑。
+- 修复了因文件合并导致的缩进/导入错误（见仓库提交记录）。
 
-3. **联系方式**：
-   ```
-   用户输入: 姓名、电话、邮箱等
-   二维码内容: https://negiao-pages.share.connect.posit.cloud/Others/decoder.html?vcard={"name":"张三",...}&type=名片&...
-   ```
+## 快速开始
 
-扫描二维码后，访问带参数的URL，部署的网页（decoder.html）会自动解析并展示内容。
+1. 安装依赖（建议使用虚拟环境）
 
-## 📦 部署
-
-### 1. Streamlit App（生成器）
-上传到 Posit Connect：
-- `app.py`
-- `requirements.txt`
-- `fonts/` 文件夹（包含中文字体，确保服务器正常显示中文）
-- `icon.jpg`（可选）
-
-### 2. 解码网页（decoder.html）
-部署到任何静态网站服务：
-- 部署地址：`https://negiao-pages.share.connect.posit.cloud/Others/decoder.html`
-- **全新UI设计**：
-  - 典雅高级的视觉风格（深蓝灰 + 香槟金配色）
-  - 纯文本模式支持垂直居中和信纸背景
-  - 自动识别并转换网址链接（Linkify）
-  - 移动端完美适配
-  - 优化字体排版（衬线体标题 + 清晰正文）
-- 用户扫描二维码后自动跳转到此URL并解析参数
-
-## 🏗️ 技术架构
-
-```python
-# 核心类
-QRCodeConfig     # 配置数据管理
-QRCodeStyle      # 样式管理
-QRCodeGenerator  # 二维码生成
-VCardBuilder     # 名片构建
-
-# 关键方法
-generator.generate_qr_content()  # 生成二维码URL内容
+```bash
+pip install -r requirements.txt
 ```
 
-## 📝 许可证
+2. 运行 Streamlit 应用：
+
+```bash
+streamlit run app.py
+```
+
+## 模块使用（开发者）
+
+如果你想在代码中复用核心功能，可直接导入 `qrcode_core`：
+
+```python
+from qrcode_core import QRCodeConfig, QRCodeGenerator
+
+cfg = QRCodeConfig(content='https://example.com', content_type='网址')
+gen = QRCodeGenerator(cfg)
+img = gen.generate()
+img.save('qrcode.png')
+```
+
+## 文件说明
+
+- `app.py`：Streamlit UI 与交互逻辑
+- `qrcode_core.py`：核心类和生成逻辑（可单元测试）
+- `requirements.txt`：运行所需依赖（`streamlit`, `qrcode`, `Pillow` 等）
+- `fonts/`：可选，本地中文字体用于服务器环境
+- `icon.jpg`：默认中心图标（可选）
+
+## 部署
+
+- 将 `app.py` 与 `requirements.txt` 上传到 Posit Connect 或在服务器上运行 `streamlit run app.py`。
+- 解码页面 `decoder.html` 可部署为静态页面（仓库内 `Others/decoder.html`）。
+
+## 运行测试（建议）
+
+- 为 `qrcode_core.py` 添加单元测试，覆盖 `generate_qr_content` 与 `generate` 的核心路径。
+
+## 许可证
 
 MIT License
 
-## 👤 作者
+## 联系
 
-NEGIAO - [访问主页](https://negiao-pages.share.connect.posit.cloud/)
+NEGIAO — https://negiao-pages.share.connect.posit.cloud/
+VCardBuilder     # 名片构建
 
