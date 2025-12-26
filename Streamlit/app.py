@@ -22,6 +22,13 @@ st.info("""
 您可以放心运行完整流程，或直接查看下方“3. 运行结果”章节中的静态展示。
 """)
 
+# 外部资源链接：在新的标签页中打开 GEE Coursework
+st.markdown(
+    '<a href="https://negiao-pages.share.connect.posit.cloud/Pages/Note/gee-coursework.html" '
+    'target="_blank" rel="noopener">查看 GEE 调参代码</a>',
+    unsafe_allow_html=True,
+)
+
 # 1. 加载数据
 st.sidebar.header("1. 数据配置")
 uploaded_file = st.sidebar.file_uploader("上传 CSV 文件", type=["csv"])
