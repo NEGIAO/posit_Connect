@@ -243,16 +243,25 @@ if config.content:
                         st.image(qr_img, use_container_width=True)
                         st.caption(f"🔗 原始网址: {url[:40]}{'...' if len(url) > 40 else ''}")
                         
-                        # 下载按钮
+                        # 下载按钮与查看效果按钮
                         buf = io.BytesIO()
                         qr_img.save(buf, format='PNG', dpi=(config.dpi, config.dpi))
-                        st.download_button(
-                            label="📥 下载",
-                            data=buf.getvalue(),
-                            file_name=f"qrcode_{i+j+1}.png",
-                            mime="image/png",
-                            key=f"download_{i+j}"
-                        )
+                        col_dl, col_open = st.columns(2)
+                        
+                        with col_dl:
+                            st.download_button(
+                                label="📥 下载",
+                                data=buf.getvalue(),
+                                file_name=f"qrcode_{i+j+1}.png",
+                                mime="image/png",
+                                key=f"download_{i+j}"
+                            )
+                        
+                        with col_open:
+                            st.markdown(
+                                f"<a href='{qr_url}' target='_blank'><button style='width:100%;padding:6px 12px;background:#0d9488;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;'>🔗 查看</button></a>",
+                                unsafe_allow_html=True
+                            )
                         
                         # 显示二维码中的URL
                         with st.expander("🔍 查看二维码URL"):
@@ -308,15 +317,27 @@ if config.content:
                 # 显示二维码
                 st.image(qr_img, use_container_width=True)
                 
-                # 下载按钮
+                # 获取二维码URL
+                qr_url = generator.generate_qr_content()
+                
+                # 下载按钮与查看效果按钮并排
+                col_dl, col_open = st.columns(2)
                 byte_img = generator.save_to_buffer(qr_img)
-                st.download_button(
-                    label=f"📥 下载二维码 ({config.dpi} DPI)",
-                    data=byte_img,
-                    file_name=f"qrcode_{config.dpi}dpi.png",
-                    mime="image/png",
-                    type="primary"
-                )
+                
+                with col_dl:
+                    st.download_button(
+                        label=f"📥 下载二维码 ({config.dpi} DPI)",
+                        data=byte_img,
+                        file_name=f"qrcode_{config.dpi}dpi.png",
+                        mime="image/png",
+                        type="primary"
+                    )
+                
+                with col_open:
+                    st.markdown(
+                        f"<a href='{qr_url}' target='_blank'><button style='width:100%;padding:6px 12px;background:#0d9488;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;'>🔗 查看效果</button></a>",
+                        unsafe_allow_html=True
+                    )
             
             except Exception as e:
                 st.error(f"生成失败: {str(e)}")
@@ -376,6 +397,7 @@ st.markdown("""
 3. 调整像素块大小、DPI和容错级别
 4. （可选）添加中心图标
 5. 点击下载按钮保存二维码
+6. 点击查看效果按钮测试二维码扫描结果
 
 **二维码工作原理：**
 - **网址类型**：二维码直接包含您输入的网址，扫描后直接访问
@@ -383,4 +405,8 @@ st.markdown("""
 - 部署地址：`https://negiao-pages.share.connect.posit.cloud/Others/decoder.html`
 
 **技术支持**: 基于面向对象设计，使用 `qrcode` 和 `Pillow` 库构建
+            
+**版权声明**: 本项目由 NEGIAO 开发，欢迎访问 [NEGIAO 主页](https://negiao-pages.share.connect.posit.cloud/) 获取更多信息和资源
+
+**latest update**: 2026-03-12
 """)
