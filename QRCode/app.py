@@ -89,6 +89,8 @@ config.style_preset = style_choice
 # 显示样式说明
 st.sidebar.caption(f"💡 {QRCodeStyle.get_description(style_choice)}")
 
+transparent_preset = style_choice == "白色前景透明背景"
+
 # 颜色配置
 if style_choice == "自定义":
     col1, col2 = st.sidebar.columns(2)
@@ -103,6 +105,17 @@ else:
         st.color_picker("前景色", config.fill_color, disabled=True)
     with col2:
         st.color_picker("背景色", config.back_color, disabled=True)
+
+config.transparent_background = st.sidebar.checkbox(
+    "导出 PNG 透明背景",
+    value=transparent_preset,
+    help="勾选后导出的PNG将使用透明底（仅PNG支持透明通道）"
+)
+
+if transparent_preset:
+    st.sidebar.caption("💡 已应用预设：白色前景 + 透明背景。建议在深色背景上使用。")
+elif config.transparent_background:
+    st.sidebar.caption("💡 透明模式已启用：背景色仅用于编辑参考，导出时背景为透明。")
 
 # 码点样式选择
 config.module_drawer = st.sidebar.selectbox(
@@ -194,6 +207,7 @@ if config.content:
             with st.expander("🎯 生成设置", expanded=False):
                 st.write(f"- **样式**: {config.style_preset}")
                 st.write(f"- **前景色**: `{config.fill_color}` | **背景色**: `{config.back_color}`")
+                st.write(f"- **导出格式**: {'透明 PNG' if config.transparent_background else '标准 PNG'}")
                 st.write(f"- **像素块**: {config.box_size} | **边框**: {config.border} | **DPI**: {config.dpi}")
                 st.write(f"- **容错级别**: {config.error_correction}")
                 if config.logo_option == "使用默认图标":
@@ -215,6 +229,7 @@ if config.content:
                         style_preset=config.style_preset,
                         fill_color=config.fill_color,
                         back_color=config.back_color,
+                        transparent_background=config.transparent_background,
                         box_size=config.box_size,
                         border=config.border,
                         dpi=config.dpi,
@@ -226,7 +241,9 @@ if config.content:
                         bottom_text=config.bottom_text,
                         font_size=config.font_size,
                         text_color=config.text_color,
-                        font_file=config.font_file
+                        font_file=config.font_file,
+                        is_bold=config.is_bold,
+                        text_padding=config.text_padding
                     )
                     url_generator = QRCodeGenerator(url_config)
                     qr_img = url_generator.generate(use_default_logo=use_default_logo)
@@ -251,7 +268,7 @@ if config.content:
                         
                         with col_dl:
                             st.download_button(
-                                label="📥 下载",
+                                label="📥 下载透明PNG" if config.transparent_background else "📥 下载",
                                 data=buf.getvalue(),
                                 file_name=f"qrcode_{i+j+1}.png",
                                 mime="image/png",
@@ -285,6 +302,7 @@ if config.content:
             st.write(f"- **样式**: {config.style_preset}")
             st.write(f"- **前景色**: `{config.fill_color}`")
             st.write(f"- **背景色**: `{config.back_color}`")
+            st.write(f"- **导出格式**: {'透明 PNG' if config.transparent_background else '标准 PNG'}")
             st.write(f"- **像素块大小**: {config.box_size}")
             st.write(f"- **边框宽度**: {config.border}")
             st.write(f"- **输出 DPI**: {config.dpi}")
@@ -327,7 +345,7 @@ if config.content:
                 
                 with col_dl:
                     st.download_button(
-                        label=f"📥 下载二维码 ({config.dpi} DPI)",
+                        label=f"📥 下载二维码 ({config.dpi} DPI, {'透明PNG' if config.transparent_background else '标准PNG'})",
                         data=byte_img,
                         file_name=f"qrcode_{config.dpi}dpi.png",
                         mime="image/png",

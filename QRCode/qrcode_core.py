@@ -32,6 +32,7 @@ class QRCodeConfig:
     style_preset: str = "经典黑白"
     fill_color: str = "#000000"
     back_color: str = "#FFFFFF"
+    transparent_background: bool = False
     module_drawer: str = "间隙方块 (Gapped)"
     
     # 尺寸相关
@@ -88,6 +89,7 @@ class QRCodeStyle:
         "自然绿": {"fill": "#15803D", "back": "#F0FDF4", "desc": "清新自然风格"},
         "浪漫粉": {"fill": "#BE185D", "back": "#FDF2F8", "desc": "温馨浪漫氛围"},
         "科技紫": {"fill": "#6B21A8", "back": "#FAF5FF", "desc": "科技感十足"},
+        "白色前景透明背景": {"fill": "#FFFFFF", "back": "#FFFFFF", "desc": "白色码点 + 透明背景，适合深色底图叠加"},
         "自定义": {"fill": "#000000", "back": "#FFFFFF", "desc": "完全自定义颜色"}
     }
     
@@ -157,15 +159,28 @@ class QRCodeGenerator:
             SquareModuleDrawer()
         )
 
+        front_rgb = self._hex_to_rgb(self.config.fill_color)
+        back_rgb = self._hex_to_rgb(self.config.back_color)
+        effective_back_rgb = back_rgb
+        chroma_key = None
+
+        # 透明背景模式：使用与前景色不同的底色作为抠图键，避免白前景被误抠掉。
+        if self.config.transparent_background:
+            chroma_key = self._pick_chroma_key(front_rgb)
+            effective_back_rgb = chroma_key
+
         # 生成图像
         img = qr.make_image(
             image_factory=StyledPilImage,
             module_drawer=module_drawer,
             color_mask=SolidFillColorMask(
-                back_color=tuple(int(self.config.back_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)),
-                front_color=tuple(int(self.config.fill_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                back_color=effective_back_rgb,
+                front_color=front_rgb
             )
-        ).convert("RGB")
+        ).convert("RGBA" if self.config.transparent_background else "RGB")
+
+        if self.config.transparent_background and chroma_key is not None:
+            img = self._replace_background_with_alpha(img, chroma_key)
         
         # 添加图标
         if self.config.logo_option != "无图标":
@@ -267,10 +282,16 @@ class QRCodeGenerator:
             
         # 创建新图像
         new_height = height + top_add + bottom_add
-        new_img = Image.new("RGB", (width, new_height), self.config.back_color)
+        if self.config.transparent_background:
+            new_img = Image.new("RGBA", (width, new_height), (0, 0, 0, 0))
+        else:
+            new_img = Image.new("RGB", (width, new_height), self.config.back_color)
         
         # 粘贴二维码
-        new_img.paste(img, (0, top_add))
+        if img.mode == "RGBA":
+            new_img.paste(img, (0, top_add), img)
+        else:
+            new_img.paste(img, (0, top_add))
         
         draw = ImageDraw.Draw(new_img)
         
@@ -326,10 +347,19 @@ class QRCodeGenerator:
         # 调整图标大小
         logo_img.thumbnail((logo_max_size, logo_max_size), Image.Resampling.LANCZOS)
         
-        # 添加白色背景
-        logo_bg = Image.new('RGB', 
-                           (logo_img.size[0] + 20, logo_img.size[1] + 20), 
-                           self.config.back_color)
+        # 添加中心留白底板，透明模式下使用白色不透明底板，增强扫码稳定性
+        if self.config.transparent_background:
+            logo_bg = Image.new(
+                'RGBA',
+                (logo_img.size[0] + 20, logo_img.size[1] + 20),
+                (255, 255, 255, 255)
+            )
+        else:
+            logo_bg = Image.new(
+                'RGB',
+                (logo_img.size[0] + 20, logo_img.size[1] + 20),
+                self.config.back_color
+            )
         
         # 粘贴图标到背景
         if logo_img.mode == 'RGBA':
@@ -342,9 +372,40 @@ class QRCodeGenerator:
             (qr_width - logo_bg.size[0]) // 2,
             (qr_height - logo_bg.size[1]) // 2
         )
-        img.paste(logo_bg, logo_pos)
+        if logo_bg.mode == 'RGBA':
+            img.paste(logo_bg, logo_pos, logo_bg)
+        else:
+            img.paste(logo_bg, logo_pos)
         
         return img
+
+    @staticmethod
+    def _hex_to_rgb(hex_color: str) -> tuple:
+        value = (hex_color or "#000000").lstrip('#')
+        if len(value) != 6:
+            value = "000000"
+        return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))
+
+    @staticmethod
+    def _pick_chroma_key(front_rgb: tuple) -> tuple:
+        candidates = [(255, 0, 255), (0, 255, 255), (255, 255, 0), (1, 2, 3)]
+        for color in candidates:
+            if color != front_rgb:
+                return color
+        return (1, 2, 3)
+
+    @staticmethod
+    def _replace_background_with_alpha(img: Image.Image, bg_rgb: tuple) -> Image.Image:
+        rgba = img.convert("RGBA")
+        pixels = rgba.getdata()
+        converted = []
+        for r, g, b, a in pixels:
+            if (r, g, b) == bg_rgb:
+                converted.append((r, g, b, 0))
+            else:
+                converted.append((r, g, b, a))
+        rgba.putdata(converted)
+        return rgba
     
     def save_to_buffer(self, img: Image.Image) -> bytes:
         """将图像保存到字节流"""
